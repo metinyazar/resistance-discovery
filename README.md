@@ -50,6 +50,14 @@ The app mirrors the `knockout-discovery` structure but keeps LLM calls optional:
 
 Set `ANTHROPIC_API_KEY` in a local `.env` file or shell environment to enable free-text parsing and narrative reporting. Without it, the structured manual form still works.
 
+To enable optional PubMed/NCBI E-utilities, create `.env` from `.env.example` and set:
+
+```bash
+NCBI_EMAIL=your.email@example.com
+```
+
+Do not commit `.env`; it is ignored by git.
+
 ## GDSC Snapshot
 
 The app seeds a small bundled experimental snapshot from `data/gdsc_seed.csv` so the UI works immediately.
