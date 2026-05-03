@@ -3,6 +3,13 @@ import streamlit as st
 from src.engine import analyze_variant_response, run_variant_analysis
 from src.llm import llm_enabled
 from src.query_parser import parse_variant_query
+from src.ui_options import (
+    amino_acid_options,
+    build_small_variant,
+    load_cancer_type_options,
+    load_drug_options,
+    load_gene_options,
+)
 
 
 BIOMARKER_TYPES = [
@@ -12,6 +19,8 @@ BIOMARKER_TYPES = [
     "expression",
     "grouped_biomarker",
 ]
+
+DRUG_OTHER_OPTION = "Other"
 
 
 def init_state():
@@ -86,6 +95,13 @@ def _ranked_papers_to_frame(ranked_papers):
         }
         for ranked in ranked_papers
     ]
+
+
+def _option_index(options, value, default=0):
+    try:
+        return options.index(value)
+    except ValueError:
+        return default
 
 
 def _render_results(result):
@@ -208,19 +224,67 @@ def _render_results(result):
 
 
 def _manual_query_form():
-    with st.form("query_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            gene_symbol = st.text_input("Gene symbol", value="EGFR")
-            biomarker_type = st.selectbox("Biomarker type", BIOMARKER_TYPES)
-            alteration = st.text_input("Alteration", value="T790M")
-        with col2:
-            therapy = st.text_input("Therapy / drug", value="Gefitinib")
-            cancer_type = st.text_input("Cancer type", value="NSCLC")
+    gene_options = load_gene_options()
+    drug_options = load_drug_options()
+    cancer_options = load_cancer_type_options()
+    aa_options = amino_acid_options()
 
-        submitted = st.form_submit_button("Analyze", type="primary")
+    col1, col2 = st.columns(2)
+    with col1:
+        gene_symbol = st.selectbox(
+            "Gene symbol",
+            gene_options,
+            index=_option_index(gene_options, "EGFR"),
+            help="Approved HGNC protein-coding gene symbols.",
+        )
+        biomarker_type = st.selectbox("Biomarker type", BIOMARKER_TYPES)
+
+        if biomarker_type == "small_variant":
+            st.caption("Build an amino-acid substitution, e.g. V600E or T790M.")
+            aa_col1, aa_col2, aa_col3 = st.columns([2, 1, 2])
+            with aa_col1:
+                ref_aa = st.selectbox("Reference amino acid", aa_options, index=_option_index(aa_options, "T - Threonine"))
+            with aa_col2:
+                aa_position = st.number_input("Position", min_value=1, max_value=10000, value=790, step=1)
+            with aa_col3:
+                alt_aa = st.selectbox("Altered amino acid", aa_options, index=_option_index(aa_options, "M - Methionine"))
+            alteration = build_small_variant(ref_aa, aa_position, alt_aa)
+            st.caption(f"Alteration: `{alteration}`")
+        else:
+            alteration = st.text_input(
+                "Alteration",
+                value="EML4-ALK fusion" if biomarker_type == "fusion" else "",
+                placeholder="e.g. EML4-ALK fusion, amplification, high expression",
+            )
+
+    with col2:
+        drug_choices = [*drug_options, DRUG_OTHER_OPTION]
+        drug_choice = st.selectbox(
+            "Therapy / drug",
+            drug_choices,
+            index=_option_index(drug_choices, "Gefitinib"),
+        )
+        if drug_choice == DRUG_OTHER_OPTION:
+            therapy = st.text_input("Other drug name", value="", placeholder="Type drug or therapy name")
+        else:
+            therapy = drug_choice
+
+        cancer_type = st.selectbox(
+            "Cancer type",
+            cancer_options,
+            index=_option_index(cancer_options, "NSCLC"),
+        )
+
+    submitted = st.button("Analyze", type="primary")
 
     if submitted:
+        if not therapy.strip():
+            st.error("Please enter a drug name when `Other` is selected.")
+            return
+        if not alteration.strip():
+            st.error("Please enter an alteration.")
+            return
+
         description = f"{gene_symbol} {alteration} with {therapy} in {cancer_type}"
         with st.spinner("Searching literature first, then attaching database support..."):
             result = analyze_variant_response(

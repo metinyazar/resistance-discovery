@@ -34,6 +34,13 @@ The default workflow does not require Claude or ChatGPT:
 5. Attach CIViC and GDSC support after literature claims are found.
 6. Synthesize a literature-first verdict. Database-only evidence remains supporting context, not the primary verdict.
 
+The structured Streamlit form includes:
+
+- Gene symbol selector built from approved HGNC protein-coding genes in `data/hgnc_protein_coding_genes.csv`
+- Drug selector from `data/drug_options.csv`, with an `Other` option for manual drug entry
+- Small-variant builder for amino-acid substitution inputs such as `V600E`
+- Cancer-type selector from `data/cancer_type_options.csv`
+
 ## Optional LLM Mode
 
 The app mirrors the `knockout-discovery` structure but keeps LLM calls optional:
