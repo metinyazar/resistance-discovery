@@ -1,0 +1,33 @@
+{
+  "data": {
+    "evidenceItems": {
+      "totalCount": 1,
+      "nodes": [
+        {
+          "id": 501,
+          "name": "EID501",
+          "significance": "SENSITIVITY/RESPONSE",
+          "evidenceDirection": "SUPPORTS",
+          "evidenceLevel": "A",
+          "evidenceRating": 5,
+          "status": "ACCEPTED",
+          "description": "BRAF V600E predicts response to vemurafenib in melanoma.",
+          "variantOrigin": "SOMATIC",
+          "molecularProfile": {
+            "name": "BRAF V600E"
+          },
+          "disease": {
+            "name": "Melanoma",
+            "displayName": "Melanoma"
+          },
+          "therapies": [
+            {
+              "name": "Vemurafenib",
+              "therapyAliases": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

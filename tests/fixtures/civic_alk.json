@@ -1,0 +1,33 @@
+{
+  "data": {
+    "evidenceItems": {
+      "totalCount": 1,
+      "nodes": [
+        {
+          "id": 610,
+          "name": "EID610",
+          "significance": "SENSITIVITY",
+          "evidenceDirection": "SUPPORTS",
+          "evidenceLevel": "A",
+          "evidenceRating": 4,
+          "status": "ACCEPTED",
+          "description": "ALK fusion-positive NSCLC responds to alectinib.",
+          "variantOrigin": "SOMATIC",
+          "molecularProfile": {
+            "name": "ALK fusion"
+          },
+          "disease": {
+            "name": "Lung Non-small Cell Carcinoma",
+            "displayName": "Lung Non-small Cell Carcinoma"
+          },
+          "therapies": [
+            {
+              "name": "Alectinib",
+              "therapyAliases": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

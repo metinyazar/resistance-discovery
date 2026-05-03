@@ -1,0 +1,61 @@
+{
+  "data": {
+    "evidenceItems": {
+      "totalCount": 2,
+      "nodes": [
+        {
+          "id": 239,
+          "name": "EID239",
+          "significance": "RESISTANCE",
+          "evidenceDirection": "SUPPORTS",
+          "evidenceLevel": "B",
+          "evidenceRating": 3,
+          "status": "ACCEPTED",
+          "description": "In non-small cell lung cancer, the appearance of T790M mutation leads to resistance to gefitinib.",
+          "variantOrigin": "SOMATIC",
+          "molecularProfile": {
+            "name": "EGFR T790M"
+          },
+          "disease": {
+            "name": "Lung Non-small Cell Carcinoma",
+            "displayName": "Lung Non-small Cell Carcinoma"
+          },
+          "therapies": [
+            {
+              "name": "Gefitinib",
+              "therapyAliases": [
+                "Iressa"
+              ]
+            }
+          ]
+        },
+        {
+          "id": 240,
+          "name": "EID240",
+          "significance": "RESISTANCE",
+          "evidenceDirection": "SUPPORTS",
+          "evidenceLevel": "C",
+          "evidenceRating": 2,
+          "status": "ACCEPTED",
+          "description": "EGFR T790M is associated with gefitinib resistance in lung adenocarcinoma.",
+          "variantOrigin": "SOMATIC",
+          "molecularProfile": {
+            "name": "EGFR T790M"
+          },
+          "disease": {
+            "name": "Lung Adenocarcinoma",
+            "displayName": "Lung Adenocarcinoma"
+          },
+          "therapies": [
+            {
+              "name": "Gefitinib",
+              "therapyAliases": [
+                "Iressa"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
