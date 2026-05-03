@@ -50,12 +50,18 @@ def _init_tables(con):
         )
         """
     )
+
+
 def get_civic_cache(cache_key: str):
-    con = get_connection()
-    row = con.execute(
-        "SELECT payload_json, queried_at FROM civic_query_cache WHERE cache_key = ?",
-        [cache_key],
-    ).fetchone()
+    try:
+        con = get_connection()
+        row = con.execute(
+            "SELECT payload_json, queried_at FROM civic_query_cache WHERE cache_key = ?",
+            [cache_key],
+        ).fetchone()
+    except duckdb.Error:
+        return None
+
     if not row:
         return None
 
@@ -68,16 +74,18 @@ def get_civic_cache(cache_key: str):
 
 
 def put_civic_cache(cache_key: str, payload: dict):
-    con = get_connection()
-    con.execute("DELETE FROM civic_query_cache WHERE cache_key = ?", [cache_key])
-    con.execute(
-        """
-        INSERT INTO civic_query_cache(cache_key, payload_json, queried_at)
-        VALUES (?, ?, ?)
-        """,
-        [cache_key, json.dumps(payload), datetime.now(timezone.utc).isoformat()],
-    )
-    return
+    try:
+        con = get_connection()
+        con.execute("DELETE FROM civic_query_cache WHERE cache_key = ?", [cache_key])
+        con.execute(
+            """
+            INSERT INTO civic_query_cache(cache_key, payload_json, queried_at)
+            VALUES (?, ?, ?)
+            """,
+            [cache_key, json.dumps(payload), datetime.now(timezone.utc).isoformat()],
+        )
+    except duckdb.Error:
+        return
 
 
 def replace_gdsc_snapshot(rows: list[tuple]):
@@ -97,35 +105,95 @@ def replace_gdsc_snapshot(rows: list[tuple]):
 
 
 def fetch_gdsc_rows():
-    con = get_connection()
-    rows = con.execute(
-        """
-        SELECT profile_label, gene_symbol, biomarker_type, alteration, therapy,
-               therapy_class, cancer_type, lineage, response_class, sample_count,
-               effect_size, p_value, statement, citation, source
-        FROM gdsc_response_summary
-        """
-    ).fetchall()
-    return [
-        {
-            "profile_label": row[0],
-            "gene_symbol": row[1],
-            "biomarker_type": row[2],
-            "alteration": row[3],
-            "therapy": row[4],
-            "therapy_class": row[5],
-            "cancer_type": row[6],
-            "lineage": row[7],
-            "response_class": row[8],
-            "sample_count": row[9],
-            "effect_size": row[10],
-            "p_value": row[11],
-            "statement": row[12],
-            "citation": row[13],
-            "source": row[14],
-        }
-        for row in rows
-    ]
+    try:
+        con = get_connection()
+        rows = con.execute(
+            """
+            SELECT profile_label, gene_symbol, biomarker_type, alteration, therapy,
+                   therapy_class, cancer_type, lineage, response_class, sample_count,
+                   effect_size, p_value, statement, citation, source
+            FROM gdsc_response_summary
+            """
+        ).fetchall()
+        return [_gdsc_row_from_tuple(row) for row in rows]
+    except duckdb.Error:
+        return _seed_gdsc_rows()
+
+
+def _gdsc_row_from_tuple(row):
+    return {
+        "profile_label": row[0],
+        "gene_symbol": row[1],
+        "biomarker_type": row[2],
+        "alteration": row[3],
+        "therapy": row[4],
+        "therapy_class": row[5],
+        "cancer_type": row[6],
+        "lineage": row[7],
+        "response_class": row[8],
+        "sample_count": row[9],
+        "effect_size": row[10],
+        "p_value": row[11],
+        "statement": row[12],
+        "citation": row[13],
+        "source": row[14],
+    }
+
+
+def _seed_gdsc_rows():
+    if not GDSC_SEED_PATH.exists():
+        return []
+
+    with GDSC_SEED_PATH.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        return [
+            {
+                "profile_label": row["profile_label"],
+                "gene_symbol": row["gene_symbol"],
+                "biomarker_type": row["biomarker_type"],
+                "alteration": row["alteration"],
+                "therapy": row["therapy"],
+                "therapy_class": row["therapy_class"],
+                "cancer_type": row["cancer_type"],
+                "lineage": row["lineage"],
+                "response_class": row["response_class"],
+                "sample_count": int(row["sample_count"]),
+                "effect_size": float(row["effect_size"]),
+                "p_value": float(row["p_value"]),
+                "statement": row["statement"],
+                "citation": row["citation"],
+                "source": row["source"],
+            }
+            for row in reader
+        ]
+
+
+def _seed_gdsc_tuples():
+    if not GDSC_SEED_PATH.exists():
+        return []
+
+    with GDSC_SEED_PATH.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        return [
+            (
+                row["profile_label"],
+                row["gene_symbol"],
+                row["biomarker_type"],
+                row["alteration"],
+                row["therapy"],
+                row["therapy_class"],
+                row["cancer_type"],
+                row["lineage"],
+                row["response_class"],
+                int(row["sample_count"]),
+                float(row["effect_size"]),
+                float(row["p_value"]),
+                row["statement"],
+                row["citation"],
+                row["source"],
+            )
+            for row in reader
+        ]
 
 
 def _seed_gdsc_if_empty(con):
@@ -133,29 +201,7 @@ def _seed_gdsc_if_empty(con):
     if row[0] > 0 or not GDSC_SEED_PATH.exists():
         return
 
-    rows = []
-    with GDSC_SEED_PATH.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            rows.append(
-                (
-                    row["profile_label"],
-                    row["gene_symbol"],
-                    row["biomarker_type"],
-                    row["alteration"],
-                    row["therapy"],
-                    row["therapy_class"],
-                    row["cancer_type"],
-                    row["lineage"],
-                    row["response_class"],
-                    int(row["sample_count"]),
-                    float(row["effect_size"]),
-                    float(row["p_value"]),
-                    row["statement"],
-                    row["citation"],
-                    row["source"],
-                )
-            )
+    rows = _seed_gdsc_tuples()
 
     con.executemany(
         """
