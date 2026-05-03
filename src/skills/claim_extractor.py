@@ -1,5 +1,6 @@
 import re
 
+from src.normalization import normalize_cancer_type, normalize_therapy
 from src.types import BiomarkerQuery, ExtractedClaim, RankedPaper
 
 RESISTANCE_PATTERNS = [
@@ -35,14 +36,18 @@ def extract_claim_from_sentence(query: BiomarkerQuery, ranked: RankedPaper, sent
     matched_terms = []
     score = 0
 
-    for term, weight in (
-        (query.gene_symbol, 2),
-        (query.alteration, 3),
-        (query.therapy, 2),
-        (query.cancer_type, 1),
-    ):
-        if term and term.lower() in lowered:
-            matched_terms.append(term)
+    therapy_info = normalize_therapy(query.therapy)
+    cancer_info = normalize_cancer_type(query.cancer_type)
+    term_groups = [
+        ([query.gene_symbol], 2),
+        ([query.alteration, f"{query.gene_symbol} {query.alteration}"], 3),
+        ([query.therapy, therapy_info["canonical"], *therapy_info["aliases"]], 2),
+        ([query.cancer_type, cancer_info["canonical"], *cancer_info["aliases"]], 1),
+    ]
+    for terms, weight in term_groups:
+        matched = _first_match(lowered, terms)
+        if matched:
+            matched_terms.append(matched)
             score += weight
 
     response_class = _response_class(lowered)
@@ -60,6 +65,13 @@ def extract_claim_from_sentence(query: BiomarkerQuery, ranked: RankedPaper, sent
         matched_terms=tuple(matched_terms),
         match_score=score,
     )
+
+
+def _first_match(lowered_sentence: str, terms: list[str]) -> str:
+    for term in terms:
+        if term and term.lower() in lowered_sentence:
+            return term
+    return ""
 
 
 def split_sentences(text: str) -> list[str]:

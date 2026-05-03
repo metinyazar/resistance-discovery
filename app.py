@@ -131,7 +131,8 @@ def _render_results(result):
         f"Query: {literature_search.get('query', 'not available')} | "
         f"Retrieved: {len(literature_search.get('records', []))} | "
         f"Europe PMC: {diagnostics.get('europe_pmc_records', 0)} | "
-        f"PubMed enabled: {diagnostics.get('pubmed_enabled', False)}"
+        f"PubMed enabled: {diagnostics.get('pubmed_enabled', False)} | "
+        f"Seed fallback: {diagnostics.get('seed_records', 0)}"
     )
     for error in diagnostics.get("errors", []):
         st.warning(error)

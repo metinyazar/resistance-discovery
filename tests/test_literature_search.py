@@ -1,4 +1,4 @@
-from src.skills.literature_search import build_literature_query, parse_pubmed_xml
+from src.skills.literature_search import build_literature_queries, build_literature_query, parse_pubmed_xml, search_seed_literature
 from src.types import BiomarkerQuery
 
 
@@ -12,6 +12,18 @@ def test_build_literature_query_uses_core_term_groups():
     assert '"Gefitinib"' in built or '"gefitinib"' in built
     assert '"NSCLC"' in built or '"nsclc"' in built
     assert '"resistance"' in built
+
+
+def test_build_literature_queries_include_all_grouped_therapy_aliases():
+    query = BiomarkerQuery("BRAF", "small_variant", "V600E", "BRAF inhibitor", "Melanoma")
+
+    queries = build_literature_queries(query)
+    joined = "\n".join(queries)
+
+    assert len(queries) > 1
+    assert '"vemurafenib"' in joined
+    assert '"dabrafenib"' in joined
+    assert '"encorafenib"' in joined
 
 
 def test_parse_pubmed_xml_extracts_minimal_record():
@@ -38,3 +50,13 @@ def test_parse_pubmed_xml_extracts_minimal_record():
     assert records[0].pmid == "123"
     assert records[0].doi == "10.1/example"
     assert "resistance" in records[0].abstract
+
+
+def test_seed_literature_supports_braf_demo_when_live_search_unavailable():
+    query = BiomarkerQuery("BRAF", "small_variant", "V600E", "BRAF inhibitor", "Melanoma")
+
+    records = search_seed_literature(query)
+
+    assert records
+    assert records[0].source == "local_literature_seed"
+    assert "vemurafenib" in records[0].abstract.lower()

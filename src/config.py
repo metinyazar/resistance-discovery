@@ -4,6 +4,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 DB_PATH = DATA_DIR / "variant_response.duckdb"
 GDSC_SEED_PATH = DATA_DIR / "gdsc_seed.csv"
+LITERATURE_SEED_PATH = DATA_DIR / "literature_seed.csv"
 
 CIVIC_GRAPHQL_URL = "https://civicdb.org/api/graphql"
 CIVIC_CACHE_TTL_HOURS = 24 * 7

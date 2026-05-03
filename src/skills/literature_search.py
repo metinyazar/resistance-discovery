@@ -1,12 +1,13 @@
+import csv
 import hashlib
 import json
 import os
 import time
 import xml.etree.ElementTree as ET
-from urllib.parse import quote_plus
 
 import requests
 
+from src.config import LITERATURE_SEED_PATH
 from src.normalization import normalize_cancer_type, normalize_therapy
 from src.skills.literature_cache import LiteratureCache
 from src.types import BiomarkerQuery, LiteratureRecord
@@ -65,20 +66,22 @@ def search_literature(query: BiomarkerQuery, max_hits: int = 50, use_pubmed: boo
     cache = LiteratureCache()
     http = RateLimitedHTTP(rate_limit_per_sec=3.0)
     try:
-        search_query = build_literature_query(query)
+        search_queries = build_literature_queries(query)
         diagnostics = {
             "europe_pmc_records": 0,
             "pubmed_enabled": False,
             "pubmed_records": 0,
             "max_hits": max_hits,
             "errors": [],
+            "queries": search_queries,
         }
 
+        records = []
         try:
-            records = search_europe_pmc(search_query, max_hits=max_hits, cache=cache, http=http)
+            for search_query in search_queries:
+                records = merge_records(records, search_europe_pmc(search_query, max_hits=max_hits, cache=cache, http=http))
             diagnostics["europe_pmc_records"] = len(records)
         except requests.RequestException as exc:
-            records = []
             diagnostics["errors"].append(f"Europe PMC request failed: {exc}")
 
         pubmed_enabled = bool(os.getenv("NCBI_EMAIL")) if use_pubmed is None else use_pubmed
@@ -86,14 +89,22 @@ def search_literature(query: BiomarkerQuery, max_hits: int = 50, use_pubmed: boo
         pubmed_records = []
         if pubmed_enabled:
             try:
-                pubmed_records = search_pubmed(search_query, max_hits=max_hits, cache=cache, http=http)
+                for search_query in search_queries:
+                    pubmed_records = merge_records(pubmed_records, search_pubmed(search_query, max_hits=max_hits, cache=cache, http=http))
                 diagnostics["pubmed_records"] = len(pubmed_records)
                 records = merge_records(records, pubmed_records)
             except requests.RequestException as exc:
                 diagnostics["errors"].append(f"PubMed request failed: {exc}")
 
+        seed_records = search_seed_literature(query)
+        if seed_records and (not records or diagnostics["errors"]):
+            records = merge_records(records, seed_records)
+            diagnostics["seed_records"] = len(seed_records)
+        else:
+            diagnostics["seed_records"] = 0
+
         return {
-            "query": search_query,
+            "query": search_queries[0],
             "records": records,
             "diagnostics": diagnostics,
         }
@@ -102,19 +113,37 @@ def search_literature(query: BiomarkerQuery, max_hits: int = 50, use_pubmed: boo
 
 
 def build_literature_query(query: BiomarkerQuery) -> str:
+    return build_literature_queries(query)[0]
+
+
+def build_literature_queries(query: BiomarkerQuery) -> list[str]:
     therapy_info = normalize_therapy(query.therapy)
     cancer_info = normalize_cancer_type(query.cancer_type)
-    therapy_terms = [query.therapy, therapy_info["canonical"], *therapy_info["aliases"][:3]]
-    cancer_terms = [query.cancer_type, cancer_info["canonical"], *cancer_info["aliases"][:3]]
+    therapy_terms = [query.therapy, therapy_info["canonical"], *therapy_info["aliases"]]
+    cancer_terms = [query.cancer_type, cancer_info["canonical"], *cancer_info["aliases"]]
 
-    parts = [
+    gene_part = _or_terms([query.gene_symbol])
+    alteration_part = _or_terms([query.alteration, f"{query.gene_symbol} {query.alteration}"])
+    therapy_part = _or_terms(_dedupe(therapy_terms))
+    cancer_part = _or_terms(_dedupe(cancer_terms))
+    response_part = _or_terms(RESPONSE_TERMS)
+
+    query_parts = [
         _or_terms([query.gene_symbol]),
-        _or_terms([query.alteration, f"{query.gene_symbol} {query.alteration}"]),
-        _or_terms(_dedupe(therapy_terms)),
-        _or_terms(_dedupe(cancer_terms)),
-        _or_terms(RESPONSE_TERMS),
+        alteration_part,
+        therapy_part,
+        cancer_part,
+        response_part,
     ]
-    return " AND ".join(part for part in parts if part)
+    strict = " AND ".join(part for part in query_parts if part)
+
+    relaxed_variants = [
+        [gene_part, alteration_part, therapy_part, cancer_part],
+        [gene_part, alteration_part, therapy_part, response_part],
+        [gene_part, alteration_part, therapy_part],
+        [gene_part, alteration_part, cancer_part],
+    ]
+    return _dedupe([strict, *[" AND ".join(part for part in parts if part) for parts in relaxed_variants]])
 
 
 def search_europe_pmc(search_query: str, max_hits: int, cache: LiteratureCache, http: RateLimitedHTTP) -> list[LiteratureRecord]:
@@ -178,6 +207,40 @@ def search_pubmed(search_query: str, max_hits: int, cache: LiteratureCache, http
     return parse_pubmed_xml(xml_text)
 
 
+def search_seed_literature(query: BiomarkerQuery) -> list[LiteratureRecord]:
+    if not LITERATURE_SEED_PATH.exists():
+        return []
+
+    therapy_info = normalize_therapy(query.therapy)
+    cancer_info = normalize_cancer_type(query.cancer_type)
+    therapy_terms = [query.therapy, therapy_info["canonical"], *therapy_info["aliases"]]
+    cancer_terms = [query.cancer_type, cancer_info["canonical"], *cancer_info["aliases"]]
+
+    records = []
+    with LITERATURE_SEED_PATH.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            record = LiteratureRecord(
+                source=row["source"],
+                pmid=row["pmid"],
+                doi=row["doi"],
+                title=row["title"],
+                journal=row["journal"],
+                year=row["year"],
+                authors=row["authors"],
+                abstract=row["abstract"],
+                url=row["url"],
+            )
+            text = f"{record.title} {record.abstract}".lower()
+            if (
+                query.gene_symbol.lower() in text
+                and query.alteration.lower() in text
+                and (_contains_any(text, therapy_terms) or _contains_any(text, cancer_terms))
+            ):
+                records.append(record)
+    return records
+
+
 def merge_records(primary: list[LiteratureRecord], secondary: list[LiteratureRecord]) -> list[LiteratureRecord]:
     merged = []
     seen = set()
@@ -188,6 +251,10 @@ def merge_records(primary: list[LiteratureRecord], secondary: list[LiteratureRec
         seen.add(key)
         merged.append(record)
     return merged
+
+
+def _contains_any(lowered_text: str, terms: list[str]) -> bool:
+    return any(term and term.lower() in lowered_text for term in terms)
 
 
 def parse_pubmed_xml(xml_text: str) -> list[LiteratureRecord]:

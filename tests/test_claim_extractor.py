@@ -28,12 +28,13 @@ def test_resistance_sentence_detected():
 
 
 def test_sensitivity_sentence_detected():
-    query = BiomarkerQuery("BRAF", "small_variant", "V600E", "Vemurafenib", "melanoma")
+    query = BiomarkerQuery("BRAF", "small_variant", "V600E", "BRAF inhibitor", "Melanoma")
     sentence = "BRAF V600E melanoma showed sensitivity and response to vemurafenib."
 
     claim = extract_claim_from_sentence(query, _ranked(query, abstract=sentence), sentence)
 
     assert claim.response_class == "SENSITIVE"
+    assert "vemurafenib" in {term.lower() for term in claim.matched_terms}
 
 
 def test_conflicting_sentence_detected():
