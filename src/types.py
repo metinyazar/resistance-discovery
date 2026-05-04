@@ -125,13 +125,18 @@ class ExtractedClaim:
 
 
 @dataclass
-class LiteratureFirstConclusion:
+class EvidenceConclusion:
     verdict: str
     confidence_band: str
-    primary_literature_count: int
-    supporting_database_count: int
-    conflicting_count: int
+    evidence_basis: str
     rationale: str
+    database_verdict: str
+    literature_verdict: str
+    database_support_count: int
+    literature_support_count: int
+    experimental_support_count: int
+    conflicting_count: int
+    confidence_score: int
     limitations: list[str]
 
     def to_dict(self) -> dict[str, Any]:

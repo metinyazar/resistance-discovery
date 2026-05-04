@@ -3,13 +3,13 @@ from src.normalization import normalize_query
 from src.skills.claim_extractor import extract_claims
 from src.skills.database_support import fetch_database_support
 from src.skills.evidence_interpreter import interpret_evidence
-from src.skills.evidence_synthesizer import synthesize_literature_first
+from src.skills.evidence_synthesizer import synthesize_database_primary
 from src.skills.literature_context import get_literature_context
 from src.skills.literature_search import search_literature
 from src.skills.paper_ranker import rank_papers
 from src.skills.report_writer import generate_narrative
 from src.skills.source_planner import plan_sources
-from src.types import LiteratureFirstConclusion, VerdictSummary
+from src.types import EvidenceConclusion, VerdictSummary
 
 
 def analyze_variant_response(gene_symbol, biomarker_type, alteration, therapy, cancer_type):
@@ -31,13 +31,13 @@ def analyze_variant_response(gene_symbol, biomarker_type, alteration, therapy, c
     supporting = database_support["supporting_experimental"]
 
     database_summary = synthesize_verdict(direct_curated, related_curated, supporting)
-    literature_conclusion = synthesize_literature_first(
+    evidence_conclusion = synthesize_database_primary(
         literature_claims,
         direct_curated,
         related_curated,
         supporting,
     )
-    summary = _conclusion_to_summary(literature_conclusion)
+    summary = _conclusion_to_summary(evidence_conclusion)
 
     return {
         "query": query,
@@ -49,7 +49,8 @@ def analyze_variant_response(gene_symbol, biomarker_type, alteration, therapy, c
         "literature_search": literature_search,
         "ranked_papers": ranked_papers,
         "literature_claims": literature_claims,
-        "literature_conclusion": literature_conclusion,
+        "evidence_conclusion": evidence_conclusion,
+        "literature_conclusion": evidence_conclusion,
         "direct_curated": direct_curated,
         "related_curated": related_curated,
         "supporting_experimental": supporting,
@@ -74,7 +75,7 @@ def run_variant_analysis(description: str, confirmed_query) -> dict:
         {"skill": "paper_ranker", "status": "done", "summary": f"Ranked {len(result['ranked_papers'])} papers by transparent match flags."},
         {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['literature_claims'])} candidate claim sentences."},
         {"skill": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
-        {"skill": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} with {result['summary'].confidence_band} literature-first confidence."},
+        {"skill": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} with {result['summary'].confidence_band} database-primary confidence."},
     ]
 
     evidence_digest = harmonize_evidence(result)
@@ -116,14 +117,14 @@ def run_variant_analysis(description: str, confirmed_query) -> dict:
     return result
 
 
-def _conclusion_to_summary(conclusion: LiteratureFirstConclusion) -> VerdictSummary:
+def _conclusion_to_summary(conclusion: EvidenceConclusion) -> VerdictSummary:
     return VerdictSummary(
         verdict=conclusion.verdict,
         confidence_band=conclusion.confidence_band,
         top_rationale=conclusion.rationale,
-        direct_evidence_count=conclusion.primary_literature_count,
+        direct_evidence_count=conclusion.database_support_count,
         conflicting_evidence_count=conclusion.conflicting_count,
-        supporting_experimental_count=conclusion.supporting_database_count,
+        supporting_experimental_count=conclusion.experimental_support_count,
     )
 
 

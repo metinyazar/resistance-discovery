@@ -1,19 +1,19 @@
 # Variant-Response Discovery Engine
 
-Literature-first research agent for questions of the form:
+Database-primary research agent for questions of the form:
 
 `mutation X in gene Y leads to resistance/sensitivity to therapy Z in cancer W`
 
 ## Scope
 
-- Primary source: published paper titles and abstracts from Europe PMC, with optional PubMed/NCBI E-utilities when `NCBI_EMAIL` is configured
-- Supporting source: accepted predictive CIViC evidence and assertions
+- Primary source: accepted predictive CIViC evidence and assertions
+- Literature validation: published paper titles and abstracts from Europe PMC, with optional PubMed/NCBI E-utilities when `NCBI_EMAIL` is configured
 - Experimental support: local GDSC-style cell-line snapshot
 - Cache/storage: DuckDB at `data/variant_response.duckdb`
 - Literature API cache: SQLite at `data/literature_cache.sqlite`
 - Prompt-driven LLM skills live in `prompts/`
 - Skill modules live in `src/skills/`
-- `src/engine.py` orchestrates normalization, literature retrieval, paper ranking, claim extraction, database support, synthesis, and optional report writing
+- `src/engine.py` orchestrates normalization, database retrieval, literature retrieval, paper ranking, claim extraction, synthesis, and optional report writing
 - Research use only, not clinical decision support
 
 ## Run
@@ -28,11 +28,11 @@ streamlit run app.py
 The default workflow does not require Claude or ChatGPT:
 
 1. Normalize gene, biomarker type, alteration, therapy, and cancer context.
-2. Search Europe PMC broadly, and PubMed when `NCBI_EMAIL` is configured.
-3. Rank papers by transparent flags: gene, alteration, therapy, cancer, resistance/sensitivity language, direct claim, abstract availability, and CRISPR screen support.
-4. Extract candidate claim sentences from titles and abstracts.
-5. Attach CIViC and GDSC support after literature claims are found.
-6. Synthesize a literature-first verdict. Database-only evidence remains supporting context, not the primary verdict.
+2. Retrieve curated CIViC database evidence and GDSC experimental support.
+3. Search Europe PMC broadly, and PubMed when `NCBI_EMAIL` is configured.
+4. Rank papers by transparent flags: gene, alteration, therapy, cancer, resistance/sensitivity language, direct claim, abstract availability, and CRISPR screen support.
+5. Extract candidate claim sentences from titles and abstracts.
+6. Synthesize a database-primary verdict. Literature validates, weakens, contradicts, or fills gaps when curated evidence is absent.
 
 The structured Streamlit form includes:
 

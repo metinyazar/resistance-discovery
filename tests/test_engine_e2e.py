@@ -76,6 +76,7 @@ def test_egfr_t790m_resistance(monkeypatch):
     )
     result = analyze_variant_response("EGFR", "small_variant", "T790M", "Gefitinib", "NSCLC")
     assert result["summary"].verdict == "RESISTANT"
+    assert result["evidence_conclusion"].evidence_basis == "direct_curated"
     assert result["direct_curated"]
     assert result["literature_claims"]
 
@@ -96,6 +97,7 @@ def test_braf_v600e_sensitivity(monkeypatch):
     )
     result = analyze_variant_response("BRAF", "small_variant", "V600E", "Vemurafenib", "melanoma")
     assert result["summary"].verdict == "SENSITIVE"
+    assert result["evidence_conclusion"].database_verdict == "SENSITIVE"
 
 
 def test_alk_fusion_sensitivity(monkeypatch):
@@ -121,6 +123,7 @@ def test_supporting_only_is_insufficient(monkeypatch):
     monkeypatch.setattr("src.engine.search_literature", lambda query: _fake_literature([]))
     result = analyze_variant_response("ERBB2", "copy_number", "amplification", "Lapatinib", "breast cancer")
     assert result["summary"].verdict == "INSUFFICIENT"
+    assert result["evidence_conclusion"].evidence_basis == "experimental_only"
     assert result["supporting_experimental"]
 
 

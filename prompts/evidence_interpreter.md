@@ -14,9 +14,10 @@ Return ONLY valid JSON with this exact schema:
 }
 
 Rules:
-- Base the main verdict on extracted literature claim sentences first.
-- Treat CIViC, GDSC, or other database evidence as support or contradiction only.
-- If literature/database evidence has mixed response classes, use CONFLICTING.
-- If direct literature claims are absent, use INSUFFICIENT even when database evidence exists.
+- Base the main verdict on curated database evidence first when direct or related CIViC evidence is available.
+- Use literature claims to validate, weaken, contradict, or fill gaps when curated database evidence is absent.
+- Treat GDSC or other experimental evidence as support only.
+- If database/literature evidence has mixed response classes, use CONFLICTING.
+- If only experimental evidence is present, use INSUFFICIENT.
 - Every claim must be grounded in the provided evidence records.
 - Do not add facts that are not present in the input.

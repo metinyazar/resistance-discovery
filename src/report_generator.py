@@ -12,7 +12,7 @@ def generate_narrative(description: str, analysis_result: dict) -> str:
     interpretation = analysis_result.get("interpretation", {})
     source_plan = analysis_result.get("source_plan", {})
     literature_context = analysis_result.get("literature_context", "")
-    literature_conclusion = analysis_result.get("literature_conclusion")
+    evidence_conclusion = analysis_result.get("evidence_conclusion") or analysis_result.get("literature_conclusion")
     literature_claims = analysis_result.get("literature_claims", [])
     ranked_papers = analysis_result.get("ranked_papers", [])
 
@@ -39,8 +39,8 @@ def generate_narrative(description: str, analysis_result: dict) -> str:
         f"EVIDENCE DIGEST:\n"
         f"- Highlights: {evidence_digest.get('highlights', [])}\n"
         f"- Cautions: {evidence_digest.get('cautions', [])}\n\n"
-        f"LITERATURE-FIRST CONCLUSION:\n"
-        f"{literature_conclusion.to_dict() if literature_conclusion else 'No literature-first conclusion available.'}\n\n"
+        f"DATABASE-PRIMARY CONCLUSION:\n"
+        f"{evidence_conclusion.to_dict() if evidence_conclusion else 'No database-primary conclusion available.'}\n\n"
         f"EXTRACTED CLAIM SENTENCES:\n"
         f"{_format_claims(literature_claims)}\n\n"
         f"TOP RANKED PAPERS:\n"

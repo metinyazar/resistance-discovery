@@ -18,9 +18,9 @@ Return ONLY valid JSON with this exact schema:
 }
 
 Rules:
-- Literature should be primary for the main biomarker-therapy response claim.
+- CIViC should be primary for curated predictive biomarker-therapy response evidence.
+- Literature should validate, weaken, contradict, or fill gaps after database lookup.
 - Europe PMC is the default literature source; PubMed is optional when NCBI_EMAIL is configured.
-- CIViC should support, replicate, or contradict the literature-derived claim.
 - GDSC should be supporting experimental cell-line evidence only.
 - Keep the plan concise and executable.
 - Do not invent unavailable databases.

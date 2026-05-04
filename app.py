@@ -111,16 +111,26 @@ def _render_results(result):
     profile = result["profile"]
     normalization = result["normalization"]
     literature_search = result.get("literature_search") or {}
-    literature_conclusion = result.get("literature_conclusion")
+    evidence_conclusion = result.get("evidence_conclusion") or result.get("literature_conclusion")
 
-    st.subheader("Verdict")
-    a, b, c = st.columns(3)
+    st.subheader("Final Answer")
+    a, b, c, d = st.columns(4)
     a.metric("Verdict", interpretation.get("verdict", summary.verdict))
     b.metric("Confidence", interpretation.get("confidence_band", summary.confidence_band).upper())
-    c.metric("Literature claims", summary.direct_evidence_count)
+    c.metric("Evidence basis", getattr(evidence_conclusion, "evidence_basis", "unknown"))
+    d.metric("Confidence score", getattr(evidence_conclusion, "confidence_score", 0))
     st.write(interpretation.get("rationale", summary.top_rationale))
-    if literature_conclusion and literature_conclusion.limitations:
-        for limitation in literature_conclusion.limitations:
+
+    if evidence_conclusion:
+        st.caption(
+            f"Database verdict: {evidence_conclusion.database_verdict} | "
+            f"Literature verdict: {evidence_conclusion.literature_verdict} | "
+            f"Database support: {evidence_conclusion.database_support_count} | "
+            f"Literature support: {evidence_conclusion.literature_support_count} | "
+            f"Experimental support: {evidence_conclusion.experimental_support_count} | "
+            f"Conflicts: {evidence_conclusion.conflicting_count}"
+        )
+        for limitation in evidence_conclusion.limitations:
             st.caption(f"Limitation: {limitation}")
 
     if result.get("agent_steps"):
@@ -141,7 +151,31 @@ def _render_results(result):
         for line in interpretation["cautions"]:
             st.write(f"- {line}")
 
-    st.subheader("Literature Evidence")
+    database_summary = result.get("database_summary")
+    if database_summary:
+        st.subheader("Database Evidence")
+        a, b, c = st.columns(3)
+        a.metric("Database-only verdict", database_summary.verdict)
+        b.metric("Curated direct", database_summary.direct_evidence_count)
+        c.metric("Experimental support", database_summary.supporting_experimental_count)
+        st.caption(database_summary.top_rationale)
+        for error in (result.get("database_support") or {}).get("diagnostics", {}).get("errors", []):
+            st.warning(error)
+
+    sections = [
+        ("Direct curated", result["direct_curated"]),
+        ("Related curated", result["related_curated"]),
+        ("Supporting experimental", result["supporting_experimental"]),
+    ]
+
+    for title, records in sections:
+        st.subheader(title)
+        if not records:
+            st.caption("No records matched this section.")
+            continue
+        st.dataframe(_records_to_frame(records), use_container_width=True, hide_index=True)
+
+    st.subheader("Literature Validation")
     diagnostics = literature_search.get("diagnostics") or {}
     st.caption(
         f"Query: {literature_search.get('query', 'not available')} | "
@@ -198,29 +232,6 @@ def _render_results(result):
         st.subheader("Narrative Report")
         st.markdown(result["report_text"])
 
-    database_summary = result.get("database_summary")
-    if database_summary:
-        st.subheader("Database Support")
-        a, b, c = st.columns(3)
-        a.metric("Database-only verdict", database_summary.verdict)
-        b.metric("Curated direct", database_summary.direct_evidence_count)
-        c.metric("Experimental support", database_summary.supporting_experimental_count)
-        st.caption(database_summary.top_rationale)
-        for error in (result.get("database_support") or {}).get("diagnostics", {}).get("errors", []):
-            st.warning(error)
-
-    sections = [
-        ("Direct curated", result["direct_curated"]),
-        ("Related curated", result["related_curated"]),
-        ("Supporting experimental", result["supporting_experimental"]),
-    ]
-
-    for title, records in sections:
-        st.subheader(title)
-        if not records:
-            st.caption("No records matched this section.")
-            continue
-        st.dataframe(_records_to_frame(records), use_container_width=True, hide_index=True)
 
 
 def _manual_query_form():
@@ -310,6 +321,7 @@ def _manual_query_form():
                 {"skill": "literature_search", "status": "done", "summary": f"Retrieved {len(result['literature_search']['records'])} literature records."},
                 {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['literature_claims'])} candidate claim sentences."},
                 {"skill": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
+                {"skill": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} from {result['evidence_conclusion'].evidence_basis} evidence."},
             ]
         st.session_state.description = description
         st.session_state.result = result
@@ -348,7 +360,7 @@ def main():
             with st.expander("Manual structured query"):
                 _manual_query_form()
         else:
-            st.info("LLM mode is disabled. Structured literature-first search still works; set `ANTHROPIC_API_KEY` to enable free-text parsing, biological context, and narrative reporting.")
+            st.info("LLM mode is disabled. Structured database-primary analysis still works; set `ANTHROPIC_API_KEY` to enable free-text parsing, biological context, and narrative reporting.")
             _manual_query_form()
         return
 

@@ -1,4 +1,4 @@
-from src.skills.evidence_synthesizer import synthesize_literature_first
+from src.skills.evidence_synthesizer import synthesize_database_primary
 from src.types import EvidenceRecord, ExtractedClaim
 
 
@@ -12,44 +12,64 @@ def _claim(response_class="RESISTANT"):
     )
 
 
-def _record(response_class="RESISTANT", source="civic_evidence"):
+def _record(response_class="RESISTANT", is_direct=True, source="civic_evidence"):
     return EvidenceRecord(
         source=source,
-        evidence_kind="curated_predictive",
+        evidence_kind="curated_predictive" if source != "GDSC_seed" else "experimental_support",
         profile_label="EGFR T790M",
         disease="Lung Non-small Cell Carcinoma",
         therapy="Gefitinib",
         therapy_aliases=[],
         response_class=response_class,
-        evidence_level="A",
-        rating=4,
+        evidence_level="A" if source != "GDSC_seed" else "preclinical",
+        rating=4 if source != "GDSC_seed" else None,
         citation="EID1",
         statement="Example",
         profile_match_level="exact",
         therapy_match_level="exact",
         cancer_match_level="exact",
-        is_direct=True,
+        is_direct=is_direct,
     )
 
 
-def test_literature_claim_with_database_agreement_increases_confidence():
-    conclusion = synthesize_literature_first([_claim("RESISTANT"), _claim("RESISTANT")], [_record("RESISTANT")], [], [])
+def test_direct_database_evidence_drives_verdict_and_literature_raises_confidence():
+    conclusion = synthesize_database_primary([_claim("RESISTANT"), _claim("RESISTANT")], [_record("RESISTANT")], [], [])
 
     assert conclusion.verdict == "RESISTANT"
     assert conclusion.confidence_band == "high"
-    assert conclusion.supporting_database_count == 1
+    assert conclusion.evidence_basis == "direct_curated"
+    assert conclusion.database_support_count == 1
+    assert conclusion.literature_support_count == 2
 
 
-def test_literature_claim_with_database_disagreement_is_conflicting():
-    conclusion = synthesize_literature_first([_claim("RESISTANT")], [_record("SENSITIVE")], [], [])
+def test_database_literature_disagreement_is_conflicting():
+    conclusion = synthesize_database_primary([_claim("RESISTANT")], [_record("SENSITIVE")], [], [])
 
     assert conclusion.verdict == "CONFLICTING"
     assert conclusion.confidence_band == "low"
+    assert conclusion.conflicting_count == 1
 
 
-def test_database_only_is_insufficient_in_literature_first_mode():
-    conclusion = synthesize_literature_first([], [_record("RESISTANT")], [], [])
+def test_database_only_can_still_drive_low_or_moderate_verdict():
+    conclusion = synthesize_database_primary([], [_record("RESISTANT")], [], [])
+
+    assert conclusion.verdict == "RESISTANT"
+    assert conclusion.evidence_basis == "direct_curated"
+    assert conclusion.literature_support_count == 0
+    assert conclusion.limitations
+
+
+def test_literature_only_gets_verdict_with_literature_basis():
+    conclusion = synthesize_database_primary([_claim("SENSITIVE")], [], [], [])
+
+    assert conclusion.verdict == "SENSITIVE"
+    assert conclusion.evidence_basis == "literature_only"
+    assert conclusion.confidence_band in {"low", "moderate"}
+
+
+def test_experimental_only_is_insufficient():
+    conclusion = synthesize_database_primary([], [], [], [_record("SENSITIVE", is_direct=False, source="GDSC_seed")])
 
     assert conclusion.verdict == "INSUFFICIENT"
-    assert conclusion.supporting_database_count == 1
-    assert conclusion.limitations
+    assert conclusion.evidence_basis == "experimental_only"
+    assert conclusion.experimental_support_count == 1
