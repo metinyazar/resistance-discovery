@@ -119,6 +119,8 @@ class ExtractedClaim:
     response_class: str
     matched_terms: tuple[str, ...]
     match_score: int
+    claim_match_level: str = "direct_claim"
+    review_flags: tuple[str, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

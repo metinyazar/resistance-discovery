@@ -64,8 +64,10 @@ def _claims_to_frame(claims):
         {
             "Paper": claim.paper_id,
             "Response": claim.response_class,
+            "Match level": claim.claim_match_level,
             "Score": claim.match_score,
             "Matched terms": ", ".join(claim.matched_terms),
+            "Review flags": ", ".join(claim.review_flags),
             "Claim sentence": claim.claim_sentence,
         }
         for claim in claims
@@ -187,12 +189,18 @@ def _render_results(result):
     for error in diagnostics.get("errors", []):
         st.warning(error)
 
-    claims = result.get("literature_claims") or []
-    if claims:
-        st.markdown("**Extracted Claim Sentences**")
-        st.dataframe(_claims_to_frame(claims), use_container_width=True, hide_index=True)
+    st.caption("Only direct claims with exact biomarker/profile evidence are counted in the literature verdict.")
+    direct_literature_claims = result.get("direct_literature_claims") or []
+    related_literature_claims = result.get("related_literature_claims") or []
+    if direct_literature_claims:
+        st.markdown("**Direct Literature Claims**")
+        st.dataframe(_claims_to_frame(direct_literature_claims), use_container_width=True, hide_index=True)
     else:
-        st.caption("No direct resistance or sensitivity claim sentence was extracted from titles/abstracts.")
+        st.caption("No direct biomarker-specific resistance or sensitivity claim sentence was extracted from titles/abstracts.")
+
+    if related_literature_claims:
+        st.markdown("**Related Literature / Manual Review**")
+        st.dataframe(_claims_to_frame(related_literature_claims), use_container_width=True, hide_index=True)
 
     ranked_papers = result.get("ranked_papers") or []
     if ranked_papers:
@@ -319,7 +327,7 @@ def _manual_query_form():
             result["agent_steps"] = [
                 {"skill": "manual_query", "status": "done", "summary": "Used the structured form instead of LLM parsing."},
                 {"skill": "literature_search", "status": "done", "summary": f"Retrieved {len(result['literature_search']['records'])} literature records."},
-                {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['literature_claims'])} candidate claim sentences."},
+                {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['direct_literature_claims'])} direct and {len(result['related_literature_claims'])} related claim sentences."},
                 {"skill": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
                 {"skill": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} from {result['evidence_conclusion'].evidence_basis} evidence."},
             ]

@@ -78,7 +78,28 @@ def test_egfr_t790m_resistance(monkeypatch):
     assert result["summary"].verdict == "RESISTANT"
     assert result["evidence_conclusion"].evidence_basis == "direct_curated"
     assert result["direct_curated"]
-    assert result["literature_claims"]
+    assert result["direct_literature_claims"]
+
+
+def test_egfr_t790m_ignores_related_sensitivity_literature(monkeypatch):
+    monkeypatch.setattr("src.civic.requests.post", _fake_post_factory(_fixture("civic_egfr.json")))
+    monkeypatch.setattr(
+        "src.engine.search_literature",
+        lambda query: _fake_literature(
+            [
+                _paper(
+                    "EGFR-mutant NSCLC sensitivity to gefitinib",
+                    "EGFR-mutant NSCLC showed sensitivity and response to gefitinib.",
+                    "1009",
+                )
+            ]
+        ),
+    )
+    result = analyze_variant_response("EGFR", "small_variant", "T790M", "Gefitinib", "NSCLC")
+    assert result["summary"].verdict == "RESISTANT"
+    assert result["evidence_conclusion"].literature_verdict == "INSUFFICIENT"
+    assert result["direct_literature_claims"] == []
+    assert result["related_literature_claims"]
 
 
 def test_braf_v600e_sensitivity(monkeypatch):
@@ -98,6 +119,7 @@ def test_braf_v600e_sensitivity(monkeypatch):
     result = analyze_variant_response("BRAF", "small_variant", "V600E", "Vemurafenib", "melanoma")
     assert result["summary"].verdict == "SENSITIVE"
     assert result["evidence_conclusion"].database_verdict == "SENSITIVE"
+    assert result["direct_literature_claims"]
 
 
 def test_alk_fusion_sensitivity(monkeypatch):
@@ -116,6 +138,7 @@ def test_alk_fusion_sensitivity(monkeypatch):
     )
     result = analyze_variant_response("ALK", "fusion", "ALK fusion", "Alectinib", "NSCLC")
     assert result["summary"].verdict == "SENSITIVE"
+    assert result["direct_literature_claims"]
 
 
 def test_supporting_only_is_insufficient(monkeypatch):
@@ -134,3 +157,43 @@ def test_unmatched_query_is_clean(monkeypatch):
     assert result["summary"].verdict == "INSUFFICIENT"
     assert result["direct_curated"] == []
     assert result["related_curated"] == []
+
+
+def test_kras_g12c_sotorasib_literature_only_gold_standard(monkeypatch):
+    monkeypatch.setattr("src.civic.requests.post", _fake_post_factory(_fixture("civic_empty.json")))
+    monkeypatch.setattr(
+        "src.engine.search_literature",
+        lambda query: _fake_literature(
+            [
+                _paper(
+                    "Sotorasib for lung cancers with KRAS p.G12C mutation",
+                    "In patients with KRAS G12C-mutated NSCLC, sotorasib therapy led to objective response and durable clinical benefit.",
+                    "34903582",
+                )
+            ]
+        ),
+    )
+    result = analyze_variant_response("KRAS", "small_variant", "G12C", "Sotorasib", "NSCLC")
+    assert result["summary"].verdict == "SENSITIVE"
+    assert result["evidence_conclusion"].evidence_basis == "literature_only"
+    assert result["direct_literature_claims"]
+
+
+def test_esr1_mutation_aromatase_inhibitor_resistance_gold_standard(monkeypatch):
+    monkeypatch.setattr("src.civic.requests.post", _fake_post_factory(_fixture("civic_empty.json")))
+    monkeypatch.setattr(
+        "src.engine.search_literature",
+        lambda query: _fake_literature(
+            [
+                _paper(
+                    "ESR1 mutation as a biomarker of aromatase inhibitor resistance in breast cancer",
+                    "ESR1 mutation in metastatic breast cancer is a common mechanism of resistance to aromatase inhibitor therapy.",
+                    "2001",
+                )
+            ]
+        ),
+    )
+    result = analyze_variant_response("ESR1", "grouped_biomarker", "mutation", "aromatase inhibitor", "breast cancer")
+    assert result["summary"].verdict == "RESISTANT"
+    assert result["evidence_conclusion"].evidence_basis == "literature_only"
+    assert result["direct_literature_claims"]

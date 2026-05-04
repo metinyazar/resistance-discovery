@@ -1,6 +1,6 @@
 from src.harmonizer import harmonize_evidence
 from src.normalization import normalize_query
-from src.skills.claim_extractor import extract_claims
+from src.skills.claim_extractor import direct_claims, extract_claims, related_claims
 from src.skills.database_support import fetch_database_support
 from src.skills.evidence_interpreter import interpret_evidence
 from src.skills.evidence_synthesizer import synthesize_database_primary
@@ -24,6 +24,8 @@ def analyze_variant_response(gene_symbol, biomarker_type, alteration, therapy, c
     literature_search = search_literature(query)
     ranked_papers = rank_papers(query, literature_search["records"])
     literature_claims = extract_claims(query, ranked_papers)
+    direct_literature_claims = direct_claims(literature_claims)
+    related_literature_claims = related_claims(literature_claims)
 
     database_support = fetch_database_support(query, profile, context)
     direct_curated = database_support["direct_curated"]
@@ -32,7 +34,7 @@ def analyze_variant_response(gene_symbol, biomarker_type, alteration, therapy, c
 
     database_summary = synthesize_verdict(direct_curated, related_curated, supporting)
     evidence_conclusion = synthesize_database_primary(
-        literature_claims,
+        direct_literature_claims,
         direct_curated,
         related_curated,
         supporting,
@@ -49,6 +51,8 @@ def analyze_variant_response(gene_symbol, biomarker_type, alteration, therapy, c
         "literature_search": literature_search,
         "ranked_papers": ranked_papers,
         "literature_claims": literature_claims,
+        "direct_literature_claims": direct_literature_claims,
+        "related_literature_claims": related_literature_claims,
         "evidence_conclusion": evidence_conclusion,
         "literature_conclusion": evidence_conclusion,
         "direct_curated": direct_curated,
@@ -73,7 +77,7 @@ def run_variant_analysis(description: str, confirmed_query) -> dict:
         {"skill": "source_planner", "status": "done", "summary": f"Selected {len(source_plan.get('sources', []))} evidence sources."},
         {"skill": "literature_search", "status": "done", "summary": f"Retrieved {len(result['literature_search']['records'])} literature records."},
         {"skill": "paper_ranker", "status": "done", "summary": f"Ranked {len(result['ranked_papers'])} papers by transparent match flags."},
-        {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['literature_claims'])} candidate claim sentences."},
+        {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['direct_literature_claims'])} direct and {len(result['related_literature_claims'])} related claim sentences."},
         {"skill": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
         {"skill": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} with {result['summary'].confidence_band} database-primary confidence."},
     ]

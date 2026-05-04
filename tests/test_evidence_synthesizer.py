@@ -12,6 +12,18 @@ def _claim(response_class="RESISTANT"):
     )
 
 
+def _related_claim(response_class="SENSITIVE"):
+    return ExtractedClaim(
+        paper_id="2",
+        claim_sentence="Related example claim.",
+        response_class=response_class,
+        matched_terms=("EGFR", "Gefitinib"),
+        match_score=8,
+        claim_match_level="related_claim",
+        review_flags=("missing_exact_alteration",),
+    )
+
+
 def _record(response_class="RESISTANT", is_direct=True, source="civic_evidence"):
     return EvidenceRecord(
         source=source,
@@ -73,3 +85,20 @@ def test_experimental_only_is_insufficient():
     assert conclusion.verdict == "INSUFFICIENT"
     assert conclusion.evidence_basis == "experimental_only"
     assert conclusion.experimental_support_count == 1
+
+
+def test_related_literature_does_not_contradict_database_when_excluded_from_synthesis():
+    direct_claims_only = []
+
+    conclusion = synthesize_database_primary(direct_claims_only, [_record("RESISTANT")], [], [])
+
+    assert conclusion.verdict == "RESISTANT"
+    assert conclusion.literature_verdict == "INSUFFICIENT"
+    assert conclusion.conflicting_count == 0
+
+
+def test_direct_contradictory_literature_creates_conflict():
+    conclusion = synthesize_database_primary([_claim("SENSITIVE")], [_record("RESISTANT")], [], [])
+
+    assert conclusion.verdict == "CONFLICTING"
+    assert conclusion.conflicting_count == 1

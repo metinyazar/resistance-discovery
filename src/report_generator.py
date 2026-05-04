@@ -14,6 +14,8 @@ def generate_narrative(description: str, analysis_result: dict) -> str:
     literature_context = analysis_result.get("literature_context", "")
     evidence_conclusion = analysis_result.get("evidence_conclusion") or analysis_result.get("literature_conclusion")
     literature_claims = analysis_result.get("literature_claims", [])
+    direct_literature_claims = analysis_result.get("direct_literature_claims", [])
+    related_literature_claims = analysis_result.get("related_literature_claims", [])
     ranked_papers = analysis_result.get("ranked_papers", [])
 
     data_block = "\n".join(_format_section(name, records) for name, records in (
@@ -43,6 +45,10 @@ def generate_narrative(description: str, analysis_result: dict) -> str:
         f"{evidence_conclusion.to_dict() if evidence_conclusion else 'No database-primary conclusion available.'}\n\n"
         f"EXTRACTED CLAIM SENTENCES:\n"
         f"{_format_claims(literature_claims)}\n\n"
+        f"DIRECT LITERATURE CLAIMS USED FOR VERDICT:\n"
+        f"{_format_claims(direct_literature_claims)}\n\n"
+        f"RELATED LITERATURE CLAIMS FOR MANUAL REVIEW:\n"
+        f"{_format_claims(related_literature_claims)}\n\n"
         f"TOP RANKED PAPERS:\n"
         f"{_format_ranked_papers(ranked_papers[:10])}\n\n"
         f"INTERPRETATION:\n"
