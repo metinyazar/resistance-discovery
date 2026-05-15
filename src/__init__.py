@@ -1,1 +1,1 @@
-"""Variant-response discovery engine."""
+"""TRACE: Therapy Response And Cancer Evidence."""

@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 
-from src.db import fetch_gdsc_rows, replace_gdsc_snapshot
+from src.db import fetch_gdsc_rows, gdsc_tuple_from_row, replace_gdsc_snapshot
 from src.normalization import classify_cancer_match, classify_profile_match, classify_therapy_match
 from src.types import EvidenceRecord, MolecularProfile
 
@@ -47,6 +47,9 @@ def fetch_supporting_evidence(query, profile: MolecularProfile, therapy_info, ca
             item.profile_match_level == "exact",
             item.therapy_match_level == "exact",
             item.cancer_match_level == "exact",
+            item.raw.get("quality_band") == "HIGH",
+            item.raw.get("quality_band") == "MEDIUM",
+            abs(item.raw.get("effect_size", 0)),
             item.raw.get("sample_count", 0),
         ),
         reverse=True,
@@ -57,25 +60,5 @@ def load_gdsc_snapshot(csv_path: str | Path):
     path = Path(csv_path)
     with path.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
-        rows = []
-        for row in reader:
-            rows.append(
-                (
-                    row["profile_label"],
-                    row["gene_symbol"],
-                    row["biomarker_type"],
-                    row["alteration"],
-                    row["therapy"],
-                    row["therapy_class"],
-                    row["cancer_type"],
-                    row["lineage"],
-                    row["response_class"],
-                    int(row["sample_count"]),
-                    float(row["effect_size"]),
-                    float(row["p_value"]),
-                    row["statement"],
-                    row["citation"],
-                    row["source"],
-                )
-            )
+        rows = [gdsc_tuple_from_row(row) for row in reader]
     replace_gdsc_snapshot(rows)

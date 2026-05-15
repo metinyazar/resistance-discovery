@@ -1,0 +1,4 @@
+,SequencingID,ModelID,ModelConditionID,IsDefaultEntryForModel,IsDefaultEntryForMC,Chrom,Pos,Ref,Alt,AF,DP,RefCount,AltCount,GT,PS,VariantType,VariantInfo,DNAChange,ProteinChange,HugoSymbol,Exon,Intron,EnsemblGeneID,Hotspot,CivicID,HessDriver,OncogeneHighImpact,TumorSuppressorHighImpact,LikelyLoF
+0,CDS-1,ACH-000001,MC-1,Yes,Yes,chr7,140753336,A,T,0.5,50,25,25,0/1,,SNV,missense_variant,c.1799T>A,p.V600E,BRAF,15/18,,ENSG00000157764,True,42,True,True,False,False
+1,CDS-2,ACH-000002,MC-2,Yes,Yes,chr7,140753336,A,T,0.5,50,25,25,0/1,,SNV,missense_variant,c.1799T>A,p.V600E,BRAF,15/18,,ENSG00000157764,True,42,True,True,False,False
+2,CDS-3,ACH-000003,MC-3,Yes,Yes,chr7,140453136,G,A,0.5,50,25,25,0/1,,SNV,missense_variant,c.1403G>A,p.G469E,BRAF,11/18,,ENSG00000157764,False,,False,False,False,False

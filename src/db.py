@@ -42,14 +42,42 @@ def _init_tables(con):
             lineage TEXT,
             response_class TEXT,
             sample_count INTEGER,
+            mutant_count INTEGER,
+            control_count INTEGER,
+            mutant_mean_response REAL,
+            control_mean_response REAL,
+            response_metric TEXT,
+            effect_direction TEXT,
             effect_size REAL,
             p_value REAL,
+            quality_band TEXT,
+            quality_flags TEXT,
             statement TEXT,
             citation TEXT,
             source TEXT
         )
         """
     )
+    _ensure_gdsc_columns(con)
+
+
+def _ensure_gdsc_columns(con):
+    existing = {
+        row[1] for row in con.execute("PRAGMA table_info('gdsc_response_summary')").fetchall()
+    }
+    columns = {
+        "mutant_count": "INTEGER",
+        "control_count": "INTEGER",
+        "mutant_mean_response": "REAL",
+        "control_mean_response": "REAL",
+        "response_metric": "TEXT",
+        "effect_direction": "TEXT",
+        "quality_band": "TEXT",
+        "quality_flags": "TEXT",
+    }
+    for column, column_type in columns.items():
+        if column not in existing:
+            con.execute(f"ALTER TABLE gdsc_response_summary ADD COLUMN {column} {column_type}")
 
 
 def get_civic_cache(cache_key: str):
@@ -97,8 +125,10 @@ def replace_gdsc_snapshot(rows: list[tuple]):
             INSERT INTO gdsc_response_summary (
                 profile_label, gene_symbol, biomarker_type, alteration,
                 therapy, therapy_class, cancer_type, lineage, response_class,
-                sample_count, effect_size, p_value, statement, citation, source
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                sample_count, mutant_count, control_count, mutant_mean_response,
+                control_mean_response, response_metric, effect_direction, effect_size,
+                p_value, quality_band, quality_flags, statement, citation, source
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )
@@ -111,7 +141,9 @@ def fetch_gdsc_rows():
             """
             SELECT profile_label, gene_symbol, biomarker_type, alteration, therapy,
                    therapy_class, cancer_type, lineage, response_class, sample_count,
-                   effect_size, p_value, statement, citation, source
+                   mutant_count, control_count, mutant_mean_response, control_mean_response,
+                   response_metric, effect_direction, effect_size, p_value, quality_band,
+                   quality_flags, statement, citation, source
             FROM gdsc_response_summary
             """
         ).fetchall()
@@ -132,12 +164,57 @@ def _gdsc_row_from_tuple(row):
         "lineage": row[7],
         "response_class": row[8],
         "sample_count": row[9],
-        "effect_size": row[10],
-        "p_value": row[11],
-        "statement": row[12],
-        "citation": row[13],
-        "source": row[14],
+        "mutant_count": row[10],
+        "control_count": row[11],
+        "mutant_mean_response": row[12],
+        "control_mean_response": row[13],
+        "response_metric": row[14],
+        "effect_direction": row[15],
+        "effect_size": row[16],
+        "p_value": row[17],
+        "quality_band": row[18] or "LOW",
+        "quality_flags": row[19] or "",
+        "statement": row[20],
+        "citation": row[21],
+        "source": row[22],
     }
+
+
+def gdsc_tuple_from_row(row):
+    sample_count = int(row["sample_count"])
+    mutant_count = int(row.get("mutant_count") or 0)
+    control_count = int(row.get("control_count") or max(sample_count - mutant_count, 0))
+    return (
+        row["profile_label"],
+        row["gene_symbol"],
+        row["biomarker_type"],
+        row["alteration"],
+        row["therapy"],
+        row.get("therapy_class", ""),
+        row["cancer_type"],
+        row.get("lineage", ""),
+        row["response_class"],
+        sample_count,
+        mutant_count,
+        control_count,
+        _optional_float(row.get("mutant_mean_response")),
+        _optional_float(row.get("control_mean_response")),
+        row.get("response_metric") or "",
+        row.get("effect_direction") or "",
+        float(row["effect_size"]),
+        float(row["p_value"]),
+        row.get("quality_band") or "LOW",
+        row.get("quality_flags") or "",
+        row["statement"],
+        row["citation"],
+        row["source"],
+    )
+
+
+def _optional_float(value):
+    if value in (None, ""):
+        return None
+    return float(value)
 
 
 def _seed_gdsc_rows():
@@ -146,26 +223,38 @@ def _seed_gdsc_rows():
 
     with GDSC_SEED_PATH.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
-        return [
-            {
-                "profile_label": row["profile_label"],
-                "gene_symbol": row["gene_symbol"],
-                "biomarker_type": row["biomarker_type"],
-                "alteration": row["alteration"],
-                "therapy": row["therapy"],
-                "therapy_class": row["therapy_class"],
-                "cancer_type": row["cancer_type"],
-                "lineage": row["lineage"],
-                "response_class": row["response_class"],
-                "sample_count": int(row["sample_count"]),
-                "effect_size": float(row["effect_size"]),
-                "p_value": float(row["p_value"]),
-                "statement": row["statement"],
-                "citation": row["citation"],
-                "source": row["source"],
-            }
-            for row in reader
-        ]
+        return [_gdsc_row_from_dict(row) for row in reader]
+
+
+def _gdsc_row_from_dict(row):
+    sample_count = int(row["sample_count"])
+    mutant_count = int(row.get("mutant_count") or 0)
+    control_count = int(row.get("control_count") or max(sample_count - mutant_count, 0))
+    return {
+        "profile_label": row["profile_label"],
+        "gene_symbol": row["gene_symbol"],
+        "biomarker_type": row["biomarker_type"],
+        "alteration": row["alteration"],
+        "therapy": row["therapy"],
+        "therapy_class": row.get("therapy_class", ""),
+        "cancer_type": row["cancer_type"],
+        "lineage": row.get("lineage", ""),
+        "response_class": row["response_class"],
+        "sample_count": sample_count,
+        "mutant_count": mutant_count,
+        "control_count": control_count,
+        "mutant_mean_response": _optional_float(row.get("mutant_mean_response")),
+        "control_mean_response": _optional_float(row.get("control_mean_response")),
+        "response_metric": row.get("response_metric", ""),
+        "effect_direction": row.get("effect_direction", ""),
+        "effect_size": float(row["effect_size"]),
+        "p_value": float(row["p_value"]),
+        "quality_band": row.get("quality_band", "LOW"),
+        "quality_flags": row.get("quality_flags", ""),
+        "statement": row["statement"],
+        "citation": row["citation"],
+        "source": row["source"],
+    }
 
 
 def _seed_gdsc_tuples():
@@ -175,24 +264,7 @@ def _seed_gdsc_tuples():
     with GDSC_SEED_PATH.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
         return [
-            (
-                row["profile_label"],
-                row["gene_symbol"],
-                row["biomarker_type"],
-                row["alteration"],
-                row["therapy"],
-                row["therapy_class"],
-                row["cancer_type"],
-                row["lineage"],
-                row["response_class"],
-                int(row["sample_count"]),
-                float(row["effect_size"]),
-                float(row["p_value"]),
-                row["statement"],
-                row["citation"],
-                row["source"],
-            )
-            for row in reader
+            gdsc_tuple_from_row(row) for row in reader
         ]
 
 
@@ -208,8 +280,10 @@ def _seed_gdsc_if_empty(con):
         INSERT INTO gdsc_response_summary (
             profile_label, gene_symbol, biomarker_type, alteration,
             therapy, therapy_class, cancer_type, lineage, response_class,
-            sample_count, effect_size, p_value, statement, citation, source
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            sample_count, mutant_count, control_count, mutant_mean_response,
+            control_mean_response, response_metric, effect_direction, effect_size,
+            p_value, quality_band, quality_flags, statement, citation, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         rows,
     )

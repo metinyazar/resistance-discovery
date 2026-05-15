@@ -102,3 +102,16 @@ def test_direct_contradictory_literature_creates_conflict():
 
     assert conclusion.verdict == "CONFLICTING"
     assert conclusion.conflicting_count == 1
+
+
+def test_experimental_disagreement_does_not_override_curated_verdict():
+    conclusion = synthesize_database_primary(
+        [],
+        [_record("SENSITIVE")],
+        [],
+        [_record("RESISTANT", is_direct=False, source="GDSC_seed")],
+    )
+
+    assert conclusion.verdict == "SENSITIVE"
+    assert conclusion.evidence_basis == "direct_curated"
+    assert conclusion.conflicting_count == 0

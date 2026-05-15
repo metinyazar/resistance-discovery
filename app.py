@@ -1,3 +1,5 @@
+import re
+
 import streamlit as st
 
 from src.engine import analyze_variant_response, run_variant_analysis
@@ -21,6 +23,69 @@ BIOMARKER_TYPES = [
 ]
 
 DRUG_OTHER_OPTION = "Other"
+CANCER_OTHER_OPTION = "Other"
+EXAMPLE_QUERIES = [
+    {
+        "label": "Example 1",
+        "title": "DepMap support",
+        "gene_symbol": "BRAF",
+        "biomarker_type": "small_variant",
+        "alteration": "V600E",
+        "therapy": "Dabrafenib",
+        "cancer_type": "Melanoma",
+        "description": "BRAF V600E melanoma models show HIGH DepMap/GDSC sensitivity evidence for dabrafenib.",
+    },
+    {
+        "label": "Example 2",
+        "title": "Resistance literature/CIViC",
+        "gene_symbol": "EGFR",
+        "biomarker_type": "small_variant",
+        "alteration": "T790M",
+        "therapy": "Gefitinib",
+        "cancer_type": "NSCLC",
+        "description": "Classic EGFR T790M resistance example in non-small-cell lung cancer.",
+    },
+    {
+        "label": "Example 3",
+        "title": "Literature-first sensitivity",
+        "gene_symbol": "KRAS",
+        "biomarker_type": "small_variant",
+        "alteration": "G12C",
+        "therapy": "Sotorasib",
+        "cancer_type": "NSCLC",
+        "description": "KRAS G12C targeted therapy example for testing literature/direct-claim behavior.",
+    },
+    {
+        "label": "Example 4",
+        "title": "Copy-number DepMap support",
+        "gene_symbol": "ERBB2",
+        "biomarker_type": "copy_number",
+        "alteration": "amplification",
+        "therapy": "Lapatinib",
+        "cancer_type": "Invasive Breast Carcinoma",
+        "description": "ERBB2 amplification example for testing copy-number DepMap/GDSC support.",
+    },
+    {
+        "label": "Example 5",
+        "title": "Expression DepMap support",
+        "gene_symbol": "ERBB2",
+        "biomarker_type": "expression",
+        "alteration": "high expression",
+        "therapy": "CP-724714",
+        "cancer_type": "Invasive Breast Carcinoma",
+        "description": "ERBB2 high-expression example for testing expression-level DepMap/GDSC support.",
+    },
+    {
+        "label": "Example 6",
+        "title": "Fusion DepMap support",
+        "gene_symbol": "ALK",
+        "biomarker_type": "fusion",
+        "alteration": "ALK fusion",
+        "therapy": "Alectinib",
+        "cancer_type": "NSCLC",
+        "description": "ALK fusion example for testing fusion-level DepMap/GDSC support.",
+    },
+]
 
 
 def init_state():
@@ -43,8 +108,10 @@ def reset_state():
 
 
 def _records_to_frame(records):
-    return [
-        {
+    rows = []
+    for record in records:
+        raw = record.raw or {}
+        row = {
             "Source": record.source,
             "Profile": record.profile_label,
             "Therapy": record.therapy,
@@ -55,8 +122,20 @@ def _records_to_frame(records):
             "Citation": record.citation,
             "Statement": record.statement,
         }
-        for record in records
-    ]
+        if record.evidence_kind == "experimental_support":
+            row.update(
+                {
+                    "Quality": raw.get("quality_band", ""),
+                    "Mutant n": raw.get("mutant_count", ""),
+                    "Control n": raw.get("control_count", ""),
+                    "Effect": raw.get("effect_size", ""),
+                    "P value": raw.get("p_value", ""),
+                    "Metric": raw.get("response_metric", ""),
+                    "Quality flags": raw.get("quality_flags", ""),
+                }
+            )
+        rows.append(row)
+    return rows
 
 
 def _claims_to_frame(claims):
@@ -104,6 +183,67 @@ def _option_index(options, value, default=0):
         return options.index(value)
     except ValueError:
         return default
+
+
+def _small_variant_parts(alteration: str):
+    match = re.fullmatch(r"([A-Z])([0-9]+)([A-Z*])", alteration.strip().upper())
+    if not match:
+        return None
+    return match.group(1), int(match.group(2)), match.group(3)
+
+
+def _amino_acid_label(code: str, aa_options: list[str]) -> str:
+    for option in aa_options:
+        if option.startswith(f"{code} - "):
+            return option
+    return aa_options[0]
+
+
+def _apply_example_to_manual_form(example, gene_options, drug_choices, cancer_choices, aa_options):
+    st.session_state["manual_gene_symbol"] = example["gene_symbol"] if example["gene_symbol"] in gene_options else gene_options[0]
+    st.session_state["manual_biomarker_type"] = example["biomarker_type"]
+
+    if example["biomarker_type"] == "small_variant":
+        parts = _small_variant_parts(example["alteration"])
+        if parts:
+            ref_aa, position, alt_aa = parts
+            st.session_state["manual_ref_aa"] = _amino_acid_label(ref_aa, aa_options)
+            st.session_state["manual_aa_position"] = position
+            st.session_state["manual_alt_aa"] = _amino_acid_label(alt_aa, aa_options)
+    else:
+        st.session_state["manual_alteration"] = example["alteration"]
+
+    if example["therapy"] in drug_choices:
+        st.session_state["manual_drug_choice"] = example["therapy"]
+        st.session_state["manual_custom_therapy"] = ""
+    else:
+        st.session_state["manual_drug_choice"] = DRUG_OTHER_OPTION
+        st.session_state["manual_custom_therapy"] = example["therapy"]
+
+    if example["cancer_type"] in cancer_choices:
+        st.session_state["manual_cancer_choice"] = example["cancer_type"]
+        st.session_state["manual_custom_cancer_type"] = ""
+    else:
+        st.session_state["manual_cancer_choice"] = CANCER_OTHER_OPTION
+        st.session_state["manual_custom_cancer_type"] = example["cancer_type"]
+
+
+def _init_manual_form_state(gene_options, drug_choices, cancer_choices, aa_options):
+    defaults = {
+        "manual_gene_symbol": "EGFR" if "EGFR" in gene_options else gene_options[0],
+        "manual_biomarker_type": "small_variant",
+        "manual_ref_aa": _amino_acid_label("T", aa_options),
+        "manual_aa_position": 790,
+        "manual_alt_aa": _amino_acid_label("M", aa_options),
+        "manual_alteration": "",
+        "manual_drug_choice": "Gefitinib" if "Gefitinib" in drug_choices else drug_choices[0],
+        "manual_custom_therapy": "",
+        "manual_cancer_choice": "NSCLC" if "NSCLC" in cancer_choices else cancer_choices[0],
+        "manual_custom_cancer_type": "",
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 def _render_results(result):
@@ -164,18 +304,23 @@ def _render_results(result):
         for error in (result.get("database_support") or {}).get("diagnostics", {}).get("errors", []):
             st.warning(error)
 
-    sections = [
+    for title, records in [
         ("Direct curated", result["direct_curated"]),
         ("Related curated", result["related_curated"]),
-        ("Supporting experimental", result["supporting_experimental"]),
-    ]
-
-    for title, records in sections:
+    ]:
         st.subheader(title)
         if not records:
             st.caption("No records matched this section.")
             continue
         st.dataframe(_records_to_frame(records), use_container_width=True, hide_index=True)
+
+    st.subheader("Supporting experimental")
+    supporting_records = result["supporting_experimental"]
+    if not supporting_records:
+        st.caption("No records matched this section.")
+    else:
+        st.caption("DepMap/GDSC evidence is preclinical. Use the Quality column to distinguish HIGH, MEDIUM, and LOW confidence associations.")
+        st.dataframe(_records_to_frame(supporting_records), use_container_width=True, hide_index=True)
 
     st.subheader("Literature Validation")
     diagnostics = literature_search.get("diagnostics") or {}
@@ -247,58 +392,95 @@ def _manual_query_form():
     drug_options = load_drug_options()
     cancer_options = load_cancer_type_options()
     aa_options = amino_acid_options()
+    drug_choices = [*drug_options, DRUG_OTHER_OPTION]
+    cancer_choices = [*cancer_options, CANCER_OTHER_OPTION]
+    _init_manual_form_state(gene_options, drug_choices, cancer_choices, aa_options)
+
+    st.markdown("**Ready examples**")
+    example_cols = st.columns(len(EXAMPLE_QUERIES))
+    for col, example in zip(example_cols, EXAMPLE_QUERIES):
+        with col:
+            if st.button(example["label"], use_container_width=True):
+                _apply_example_to_manual_form(example, gene_options, drug_choices, cancer_choices, aa_options)
+            st.caption(example["description"])
 
     col1, col2 = st.columns(2)
     with col1:
         gene_symbol = st.selectbox(
             "Gene symbol",
             gene_options,
-            index=_option_index(gene_options, "EGFR"),
             help="Approved HGNC protein-coding gene symbols.",
+            key="manual_gene_symbol",
         )
-        biomarker_type = st.selectbox("Biomarker type", BIOMARKER_TYPES)
+        biomarker_type = st.selectbox("Biomarker type", BIOMARKER_TYPES, key="manual_biomarker_type")
 
         if biomarker_type == "small_variant":
             st.caption("Build an amino-acid substitution, e.g. V600E or T790M.")
             aa_col1, aa_col2, aa_col3 = st.columns([2, 1, 2])
             with aa_col1:
-                ref_aa = st.selectbox("Reference amino acid", aa_options, index=_option_index(aa_options, "T - Threonine"))
+                ref_aa = st.selectbox(
+                    "Reference amino acid",
+                    aa_options,
+                    key="manual_ref_aa",
+                )
             with aa_col2:
-                aa_position = st.number_input("Position", min_value=1, max_value=10000, value=790, step=1)
+                aa_position = st.number_input(
+                    "Position",
+                    min_value=1,
+                    max_value=10000,
+                    step=1,
+                    key="manual_aa_position",
+                )
             with aa_col3:
-                alt_aa = st.selectbox("Altered amino acid", aa_options, index=_option_index(aa_options, "M - Methionine"))
+                alt_aa = st.selectbox(
+                    "Altered amino acid",
+                    aa_options,
+                    key="manual_alt_aa",
+                )
             alteration = build_small_variant(ref_aa, aa_position, alt_aa)
             st.caption(f"Alteration: `{alteration}`")
         else:
             alteration = st.text_input(
                 "Alteration",
-                value="EML4-ALK fusion" if biomarker_type == "fusion" else "",
                 placeholder="e.g. EML4-ALK fusion, amplification, high expression",
+                key="manual_alteration",
             )
 
     with col2:
-        drug_choices = [*drug_options, DRUG_OTHER_OPTION]
         drug_choice = st.selectbox(
-            "Therapy / drug",
+            "Therapy / drug suggestion",
             drug_choices,
-            index=_option_index(drug_choices, "Gefitinib"),
+            key="manual_drug_choice",
         )
-        if drug_choice == DRUG_OTHER_OPTION:
-            therapy = st.text_input("Other drug name", value="", placeholder="Type drug or therapy name")
-        else:
-            therapy = drug_choice
+        custom_therapy = st.text_input(
+            "Type drug name",
+            placeholder="Optional override, e.g. Pyrimethamine",
+            help="Use this when the drug is not in the suggestion list or when you want an exact DepMap/GDSC drug label.",
+            key="manual_custom_therapy",
+        )
+        therapy = custom_therapy.strip() or ("" if drug_choice == DRUG_OTHER_OPTION else drug_choice)
 
-        cancer_type = st.selectbox(
-            "Cancer type",
-            cancer_options,
-            index=_option_index(cancer_options, "NSCLC"),
+        cancer_choice = st.selectbox(
+            "Cancer type suggestion",
+            cancer_choices,
+            key="manual_cancer_choice",
         )
+        custom_cancer_type = st.text_input(
+            "Type cancer type",
+            placeholder="Optional override, e.g. Non-Small Cell Lung Cancer",
+            help="Use this when the cancer label is not in the suggestion list or you want the exact DepMap/CIViC wording.",
+            key="manual_custom_cancer_type",
+        )
+        cancer_type = custom_cancer_type.strip() or ("" if cancer_choice == CANCER_OTHER_OPTION else cancer_choice)
 
     submitted = st.button("Analyze", type="primary")
 
     if submitted:
         if not therapy.strip():
-            st.error("Please enter a drug name when `Other` is selected.")
+            st.error("Please enter a drug name.")
+            return
+        if not cancer_type.strip():
+            st.error("Please enter a cancer type.")
             return
         if not alteration.strip():
             st.error("Please enter an alteration.")
@@ -338,13 +520,16 @@ def _manual_query_form():
 
 
 def main():
-    st.set_page_config(page_title="Variant-Response Discovery Engine", layout="wide")
+    st.set_page_config(page_title="TRACE", layout="wide")
     init_state()
     phase = st.session_state.phase
     llm_ready = llm_enabled()
 
-    st.title("Variant-Response Discovery Engine")
-    st.caption("Research-use discovery tool for variant, therapy, and cancer-context response evidence.")
+    st.title("TRACE")
+    st.caption(
+        "Therapy Response And Cancer Evidence: a research-use tool for biomarker, therapy, "
+        "and cancer-context response evidence."
+    )
 
     col1, col2 = st.columns([5, 1])
     with col2:
@@ -411,7 +596,7 @@ def main():
         return
 
     if phase == "running":
-        with st.spinner("Running variant-response analysis..."):
+        with st.spinner("Running TRACE analysis..."):
             st.session_state.result = run_variant_analysis(
                 st.session_state.description,
                 st.session_state.confirmed_query,

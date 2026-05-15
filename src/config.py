@@ -8,6 +8,10 @@ LITERATURE_SEED_PATH = DATA_DIR / "literature_seed.csv"
 HGNC_PROTEIN_CODING_PATH = DATA_DIR / "hgnc_protein_coding_genes.csv"
 DRUG_OPTIONS_PATH = DATA_DIR / "drug_options.csv"
 CANCER_OPTIONS_PATH = DATA_DIR / "cancer_type_options.csv"
+DEPMAP_RAW_DIR = DATA_DIR / "depmap_raw"
+DEPMAP_PROCESSED_DIR = DATA_DIR / "depmap_processed"
+DEPMAP_SANGER_DOSE_RESPONSE_PATH = DEPMAP_RAW_DIR / "sanger-dose-response.csv"
+DEPMAP_GDSC_SNAPSHOT_PATH = DEPMAP_PROCESSED_DIR / "gdsc_variant_response_snapshot.csv"
 
 CIVIC_GRAPHQL_URL = "https://civicdb.org/api/graphql"
 CIVIC_CACHE_TTL_HOURS = 24 * 7

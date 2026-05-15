@@ -24,6 +24,7 @@ def test_build_literature_queries_include_all_grouped_therapy_aliases():
     assert '"vemurafenib"' in joined
     assert '"dabrafenib"' in joined
     assert '"encorafenib"' in joined
+    assert '"plx-4720"' in joined
 
 
 def test_parse_pubmed_xml_extracts_minimal_record():

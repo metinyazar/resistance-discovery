@@ -1,0 +1,7 @@
+,SequencingID,ModelConditionID,ModelID,IsDefaultEntryForMC,IsDefaultEntryForModel,ESR1 (2099),CD274 (29126)
+0,RNA-1,MC-1,ACH-000001,Yes,Yes,10.0,0.1
+1,RNA-2,MC-2,ACH-000002,Yes,Yes,9.0,0.2
+2,RNA-3,MC-3,ACH-000003,Yes,Yes,1.0,0.3
+3,RNA-4,MC-4,ACH-000004,Yes,Yes,1.1,0.4
+4,RNA-5,MC-5,ACH-000005,Yes,Yes,1.2,0.5
+5,RNA-6,MC-6,ACH-000006,Yes,Yes,1.3,0.6

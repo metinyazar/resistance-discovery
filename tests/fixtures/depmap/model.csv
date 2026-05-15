@@ -1,0 +1,7 @@
+ModelID,PatientID,CellLineName,StrippedCellLineName,DepmapModelType,OncotreeLineage,OncotreePrimaryDisease,OncotreeSubtype,OncotreeCode
+ACH-000001,PT-1,A375,A375,MEL,Skin,Melanoma,Melanoma,MEL
+ACH-000002,PT-2,SKMEL28,SKMEL28,MEL,Skin,Melanoma,Melanoma,MEL
+ACH-000003,PT-3,CTRL1,CTRL1,MEL,Skin,Melanoma,Melanoma,MEL
+ACH-000004,PT-4,CTRL2,CTRL2,MEL,Skin,Melanoma,Melanoma,MEL
+ACH-000005,PT-5,CTRL3,CTRL3,MEL,Skin,Melanoma,Melanoma,MEL
+ACH-000006,PT-6,CTRL4,CTRL4,MEL,Skin,Melanoma,Melanoma,MEL

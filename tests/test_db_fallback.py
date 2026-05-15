@@ -13,6 +13,7 @@ def test_fetch_gdsc_rows_falls_back_to_seed_when_duckdb_is_locked(monkeypatch):
 
     assert rows
     assert any(row["profile_label"] == "BRAF V600E" for row in rows)
+    assert all("quality_band" in row for row in rows)
 
 
 def test_civic_cache_returns_none_when_duckdb_is_locked(monkeypatch):

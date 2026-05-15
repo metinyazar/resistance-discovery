@@ -31,3 +31,10 @@ def test_normalizes_grouped_biomarker():
     query, profile, _ = normalize_query("EGFR", "grouped_biomarker", "activating mutation", "EGFR TKI", "NSCLC")
     assert query.alteration == "activating mutation"
     assert profile.label == "EGFR activating mutation"
+
+
+def test_normalizes_targeted_therapy_classes():
+    _, _, context = normalize_query("BRAF", "small_variant", "V600E", "PLX-4720", "Melanoma")
+    assert context["therapy"]["canonical"] == "BRAF inhibitor"
+    assert "dabrafenib" in context["therapy"]["aliases"]
+    assert "plx-4720" in context["therapy"]["aliases"]

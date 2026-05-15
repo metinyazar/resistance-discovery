@@ -16,13 +16,38 @@ THERAPY_GROUPS = {
             "dacomitinib",
         },
     },
+    "egfr antibody": {
+        "canonical": "EGFR antibody",
+        "aliases": {
+            "egfr antibody",
+            "cetuximab",
+            "cetuximab, erbitux",
+            "erbitux",
+            "panitumumab",
+        },
+    },
     "braf inhibitor": {
         "canonical": "BRAF inhibitor",
         "aliases": {
             "braf inhibitor",
+            "raf inhibitor",
             "vemurafenib",
             "dabrafenib",
             "encorafenib",
+            "plx-4720",
+            "sb-590885",
+        },
+    },
+    "mek inhibitor": {
+        "canonical": "MEK inhibitor",
+        "aliases": {
+            "mek inhibitor",
+            "trametinib",
+            "binimetinib",
+            "cobimetinib",
+            "selumetinib",
+            "pd-0325901",
+            "pd-184352",
         },
     },
     "alk inhibitor": {
@@ -34,6 +59,111 @@ THERAPY_GROUPS = {
             "alectinib",
             "brigatinib",
             "lorlatinib",
+        },
+    },
+    "erbb2 inhibitor": {
+        "canonical": "ERBB2 inhibitor",
+        "aliases": {
+            "erbb2 inhibitor",
+            "her2 inhibitor",
+            "lapatinib",
+            "neratinib",
+            "tucatinib",
+            "trastuzumab",
+            "pertuzumab",
+            "t-dm1",
+            "trastuzumab deruxtecan",
+        },
+    },
+    "pi3k inhibitor": {
+        "canonical": "PI3K inhibitor",
+        "aliases": {
+            "pi3k inhibitor",
+            "alpelisib",
+            "taselisib",
+            "buparlisib",
+            "pictilisib",
+            "gdc-0941",
+            "zstk-474",
+            "gsk2126458",
+            "idelalisib",
+        },
+    },
+    "akt inhibitor": {
+        "canonical": "AKT inhibitor",
+        "aliases": {
+            "akt inhibitor",
+            "mk-2206",
+            "uprosertib",
+            "capivasertib",
+            "ipatasertib",
+        },
+    },
+    "mtor inhibitor": {
+        "canonical": "mTOR inhibitor",
+        "aliases": {
+            "mtor inhibitor",
+            "everolimus",
+            "temsirolimus",
+            "azd8055",
+        },
+    },
+    "parp inhibitor": {
+        "canonical": "PARP inhibitor",
+        "aliases": {
+            "parp inhibitor",
+            "olaparib",
+            "rucaparib",
+            "niraparib",
+            "talazoparib",
+            "veliparib",
+        },
+    },
+    "kras g12c inhibitor": {
+        "canonical": "KRAS G12C inhibitor",
+        "aliases": {
+            "kras g12c inhibitor",
+            "kras inhibitor",
+            "sotorasib",
+            "adagrasib",
+        },
+    },
+    "cdk4/6 inhibitor": {
+        "canonical": "CDK4/6 inhibitor",
+        "aliases": {
+            "cdk4/6 inhibitor",
+            "cdk4 inhibitor",
+            "cdk6 inhibitor",
+            "palbociclib",
+            "ribociclib",
+            "abemaciclib",
+        },
+    },
+    "met inhibitor": {
+        "canonical": "MET inhibitor",
+        "aliases": {
+            "met inhibitor",
+            "capmatinib",
+            "tepotinib",
+            "savolitinib",
+            "crizotinib",
+        },
+    },
+    "ret inhibitor": {
+        "canonical": "RET inhibitor",
+        "aliases": {
+            "ret inhibitor",
+            "selpercatinib",
+            "pralsetinib",
+        },
+    },
+    "ntrk inhibitor": {
+        "canonical": "NTRK inhibitor",
+        "aliases": {
+            "ntrk inhibitor",
+            "trk inhibitor",
+            "larotrectinib",
+            "entrectinib",
         },
     },
 }

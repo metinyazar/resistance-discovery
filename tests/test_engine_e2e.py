@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from src.engine import analyze_variant_response
-from src.types import LiteratureRecord
+from src.types import EvidenceRecord, LiteratureRecord
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -144,6 +144,32 @@ def test_alk_fusion_sensitivity(monkeypatch):
 def test_supporting_only_is_insufficient(monkeypatch):
     monkeypatch.setattr("src.civic.requests.post", _fake_post_factory(_fixture("civic_empty.json")))
     monkeypatch.setattr("src.engine.search_literature", lambda query: _fake_literature([]))
+    monkeypatch.setattr(
+        "src.engine.fetch_database_support",
+        lambda query, profile, context: {
+            "direct_curated": [],
+            "related_curated": [],
+            "supporting_experimental": [
+                EvidenceRecord(
+                    source="fixture",
+                    evidence_kind="experimental_support",
+                    profile_label="ERBB2 amplification",
+                    disease="Breast Carcinoma",
+                    therapy="Lapatinib",
+                    therapy_aliases=[],
+                    response_class="SENSITIVE",
+                    evidence_level="preclinical",
+                    rating=None,
+                    citation="Fixture",
+                    statement="Fixture experimental support only.",
+                    profile_match_level="exact",
+                    therapy_match_level="exact",
+                    cancer_match_level="exact",
+                    is_direct=False,
+                )
+            ],
+        },
+    )
     result = analyze_variant_response("ERBB2", "copy_number", "amplification", "Lapatinib", "breast cancer")
     assert result["summary"].verdict == "INSUFFICIENT"
     assert result["evidence_conclusion"].evidence_basis == "experimental_only"

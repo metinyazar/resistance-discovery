@@ -15,6 +15,11 @@ def test_drug_options_include_other_supported_examples():
     assert "Gefitinib" in drugs
     assert "Vemurafenib" in drugs
     assert "Alectinib" in drugs
+    assert "Dabrafenib" in drugs
+    assert "Pyrimethamine" in drugs
+    assert "Plx-4720" in drugs
+    assert "BRAF inhibitor" in drugs
+    assert "MEK inhibitor" in drugs
 
 
 def test_cancer_type_options_include_demo_contexts():
@@ -22,6 +27,9 @@ def test_cancer_type_options_include_demo_contexts():
 
     assert "NSCLC" in cancers
     assert "Melanoma" in cancers
+    assert "Non-Small Cell Lung Cancer" in cancers
+    assert "Colorectal Adenocarcinoma" in cancers
+    assert "Mature B-Cell Neoplasms" in cancers
 
 
 def test_build_small_variant_from_amino_acid_widgets():

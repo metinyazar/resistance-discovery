@@ -23,6 +23,14 @@ def test_therapy_match_levels():
     assert classify_therapy_match(therapy_info, "Gefitinib", ["Iressa"]) == "class"
     assert classify_therapy_match(therapy_info, "EGFR inhibitor", []) == "exact"
 
+    braf_class = normalize_therapy("BRAF inhibitor")
+    assert classify_therapy_match(braf_class, "PLX-4720", []) == "class"
+    assert classify_therapy_match(braf_class, "Dabrafenib", []) == "class"
+
+    exact_drug = normalize_therapy("Dabrafenib")
+    assert classify_therapy_match(exact_drug, "Dabrafenib", []) == "exact"
+    assert classify_therapy_match(exact_drug, "PLX-4720", []) == "class"
+
 
 def test_cancer_match_levels():
     cancer_info = normalize_cancer_type("NSCLC")

@@ -30,7 +30,6 @@ def synthesize_database_primary(
             database_conflicts
             + literature_conflicts
             + _opposing_count(literature_counts, database_verdict)
-            + _opposing_count(experimental_counts, database_verdict)
         )
         if conflicts:
             final_verdict = "CONFLICTING"
@@ -40,7 +39,7 @@ def synthesize_database_primary(
         database_support = 0
         literature_support = literature_counts.get(literature_verdict, 0)
         experimental_support = experimental_counts.get(literature_verdict, 0)
-        conflicts = literature_conflicts + _opposing_count(experimental_counts, literature_verdict)
+        conflicts = literature_conflicts
         if conflicts:
             final_verdict = "CONFLICTING"
     else:

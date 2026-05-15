@@ -1,0 +1,7 @@
+,SequencingID,ModelConditionID,ModelID,IsDefaultEntryForMC,IsDefaultEntryForModel,ERBB2 (2064),CDKN2A (1029)
+0,CDS-1,MC-1,ACH-000001,Yes,Yes,8.0,1.0
+1,CDS-2,MC-2,ACH-000002,Yes,Yes,7.5,1.0
+2,CDS-3,MC-3,ACH-000003,Yes,Yes,2.0,1.0
+3,CDS-4,MC-4,ACH-000004,Yes,Yes,2.1,1.0
+4,CDS-5,MC-5,ACH-000005,Yes,Yes,2.2,1.0
+5,CDS-6,MC-6,ACH-000006,Yes,Yes,2.3,1.0
