@@ -1,11 +1,19 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from src.engine import analyze_variant_response
 from src.types import EvidenceRecord, LiteratureRecord
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+
+@pytest.fixture(autouse=True)
+def _disable_civic_cache(monkeypatch):
+    monkeypatch.setattr("src.civic.get_civic_cache", lambda cache_key: None)
+    monkeypatch.setattr("src.civic.put_civic_cache", lambda cache_key, payload: None)
 
 
 class DummyResponse:

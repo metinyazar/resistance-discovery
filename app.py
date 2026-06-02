@@ -1,4 +1,7 @@
+import base64
+import html
 import re
+from pathlib import Path
 
 import streamlit as st
 
@@ -24,6 +27,267 @@ BIOMARKER_TYPES = [
 
 DRUG_OTHER_OPTION = "Other"
 CANCER_OTHER_OPTION = "Other"
+ASSET_DIR = Path(__file__).parent / "assets"
+TRACE_BANNER_PATH = ASSET_DIR / "trace_banner.png"
+
+
+TRACE_CSS = """
+<style>
+:root {
+    --trace-ink: #172033;
+    --trace-muted: #64748b;
+    --trace-page: #eef3f8;
+    --trace-panel: rgba(248, 251, 255, 0.92);
+    --trace-blue: #2563eb;
+    --trace-navy: #0f2747;
+    --trace-sky: #8ec5ff;
+    --trace-cyan: #19a7ce;
+    --trace-line: rgba(42, 63, 95, 0.16);
+    --trace-shadow: 0 20px 60px rgba(15, 39, 71, 0.12);
+}
+
+html, body, [data-testid="stAppViewContainer"] {
+    color: var(--trace-ink);
+    background:
+        radial-gradient(circle at 8% 8%, rgba(37, 99, 235, 0.16), transparent 25rem),
+        radial-gradient(circle at 94% 4%, rgba(25, 167, 206, 0.14), transparent 26rem),
+        linear-gradient(135deg, #f3f7fb 0%, #e8eef5 54%, #f7f9fc 100%) !important;
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+}
+
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+.block-container {
+    max-width: 1240px;
+    padding-top: 2.4rem;
+    padding-bottom: 4rem;
+}
+
+h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownContainer"] h2 {
+    color: var(--trace-ink);
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+    letter-spacing: -0.035em;
+}
+
+.trace-hero {
+    position: relative;
+    margin: 0 0 1.8rem;
+    padding: clamp(0.8rem, 2vw, 1.2rem);
+    border: 1px solid var(--trace-line);
+    border-radius: 28px;
+    background:
+        linear-gradient(135deg, rgba(248, 251, 255, 0.97), rgba(224, 234, 247, 0.9)),
+        radial-gradient(circle at 90% 16%, rgba(37, 99, 235, 0.14), transparent 20rem);
+    box-shadow: var(--trace-shadow);
+    overflow: hidden;
+}
+
+.trace-hero::after {
+    content: none;
+}
+
+.trace-hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: none;
+}
+
+.trace-banner-img {
+    display: block;
+    width: min(100%, 760px);
+    margin: 0 auto;
+    border-radius: 20px;
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    box-shadow: 0 18px 48px rgba(15, 39, 71, 0.12);
+}
+
+.trace-eyebrow,
+.trace-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: fit-content;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 999px;
+    background: rgba(239, 246, 255, 0.78);
+    color: var(--trace-navy);
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.trace-eyebrow {
+    padding: 0.48rem 0.72rem;
+}
+
+.trace-title {
+    margin: 1rem 0 0.55rem;
+    color: var(--trace-ink);
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+    font-size: clamp(3.2rem, 8vw, 6.6rem);
+    font-weight: 850;
+    line-height: 0.9;
+    letter-spacing: -0.075em;
+}
+
+.trace-subtitle {
+    margin: 0.95rem 0 0;
+    max-width: 900px;
+    color: #475569;
+    font-size: clamp(0.98rem, 1.6vw, 1.18rem);
+    line-height: 1.45;
+}
+
+.trace-hero-grid {
+    display: none;
+}
+
+.trace-chip {
+    padding: 0.5rem 0.68rem;
+}
+
+.trace-section {
+    margin: 1.25rem 0 0.75rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--trace-line);
+    border-left: 6px solid var(--trace-blue);
+    border-radius: 22px;
+    background: rgba(248, 251, 255, 0.78);
+}
+
+.trace-section h2 {
+    margin: 0;
+    font-size: 1.62rem;
+    line-height: 1.05;
+}
+
+.trace-section p {
+    margin: 0.3rem 0 0;
+    color: var(--trace-muted);
+}
+
+.trace-summary-card {
+    margin: 0.3rem 0 1.1rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    border-radius: 26px;
+    background: linear-gradient(135deg, #0f2747, #1d4ed8);
+    color: #f8fbff;
+    box-shadow: var(--trace-shadow);
+}
+
+.trace-summary-card .trace-chip {
+    margin-bottom: 0.9rem;
+    border-color: rgba(248, 251, 255, 0.24);
+    background: rgba(248, 251, 255, 0.1);
+    color: #bfdbfe;
+}
+
+.trace-summary-card h3 {
+    margin: 0 0 0.45rem;
+    color: #f8fbff;
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+    font-size: clamp(1.55rem, 3vw, 2.4rem);
+    letter-spacing: -0.045em;
+}
+
+.trace-summary-card p {
+    margin: 0;
+    color: rgba(248, 251, 255, 0.82);
+    font-size: 1.02rem;
+    line-height: 1.55;
+}
+
+div[data-testid="stMetric"] {
+    padding: 1rem;
+    border: 1px solid var(--trace-line);
+    border-radius: 22px;
+    background: rgba(248, 251, 255, 0.88);
+    box-shadow: 0 12px 34px rgba(23, 35, 31, 0.08);
+}
+
+div[data-testid="stMetric"] label {
+    color: var(--trace-muted) !important;
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+div[data-testid="stMetricValue"] {
+    color: var(--trace-blue);
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.stButton > button,
+[data-testid="stFormSubmitButton"] button {
+    border: 1px solid rgba(37, 99, 235, 0.34);
+    border-radius: 999px;
+    background: var(--trace-blue);
+    color: #f8fbff;
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
+}
+
+.stButton > button:hover,
+[data-testid="stFormSubmitButton"] button:hover {
+    border-color: var(--trace-navy);
+    background: #1d4ed8;
+    color: #f8fbff;
+}
+
+.stButton > button[kind="primary"],
+[data-testid="stFormSubmitButton"] button[kind="primary"] {
+    background: var(--trace-navy);
+    border-color: var(--trace-navy);
+}
+
+div[data-testid="stAlert"] {
+    border-radius: 20px;
+    border: 1px solid rgba(37, 99, 235, 0.16);
+    background: rgba(248, 251, 255, 0.82);
+}
+
+div[data-testid="stDataFrame"],
+div[data-testid="stJson"] {
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--trace-line);
+    box-shadow: 0 12px 34px rgba(23, 35, 31, 0.07);
+}
+
+[data-baseweb="select"] > div,
+input,
+textarea {
+    border-radius: 14px !important;
+}
+
+section[data-testid="stSidebar"] {
+    background: rgba(238, 243, 248, 0.94);
+}
+
+@media (max-width: 760px) {
+    .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .trace-hero {
+        border-radius: 24px;
+    }
+
+    .trace-title {
+        font-size: 4rem;
+    }
+}
+</style>
+"""
+
 EXAMPLE_QUERIES = [
     {
         "label": "Example 1",
@@ -199,6 +463,65 @@ def _amino_acid_label(code: str, aa_options: list[str]) -> str:
     return aa_options[0]
 
 
+def _inject_trace_theme():
+    st.markdown(TRACE_CSS, unsafe_allow_html=True)
+
+
+def _image_data_uri(path: Path) -> str:
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def _render_trace_hero():
+    banner_uri = _image_data_uri(TRACE_BANNER_PATH)
+    st.markdown(
+        f"""
+        <section class="trace-hero">
+          <div class="trace-hero-content">
+            <img class="trace-banner-img" src="{banner_uri}" alt="TRACE: Therapy Response And Cancer Evidence" />
+            <p class="trace-subtitle">
+              TRACE helps explore whether a cancer biomarker is linked to drug sensitivity
+              or resistance by combining curated databases, literature evidence, and DepMap
+              experimental support.
+            </p>
+          </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _section(title: str, subtitle: str = ""):
+    safe_title = html.escape(title)
+    safe_subtitle = html.escape(subtitle)
+    subtitle_html = f"<p>{safe_subtitle}</p>" if subtitle else ""
+    st.markdown(
+        f"""
+        <div class="trace-section">
+          <h2>{safe_title}</h2>
+          {subtitle_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _summary_card(verdict: str, confidence: str, rationale: str):
+    safe_verdict = html.escape(verdict)
+    safe_confidence = html.escape(confidence.upper())
+    safe_rationale = html.escape(rationale)
+    st.markdown(
+        f"""
+        <div class="trace-summary-card">
+          <div class="trace-chip">Final interpretation</div>
+          <h3>{safe_verdict} · {safe_confidence}</h3>
+          <p>{safe_rationale}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _apply_example_to_manual_form(example, gene_options, drug_choices, cancer_choices, aa_options):
     st.session_state["manual_gene_symbol"] = example["gene_symbol"] if example["gene_symbol"] in gene_options else gene_options[0]
     st.session_state["manual_biomarker_type"] = example["biomarker_type"]
@@ -255,13 +578,20 @@ def _render_results(result):
     literature_search = result.get("literature_search") or {}
     evidence_conclusion = result.get("evidence_conclusion") or result.get("literature_conclusion")
 
-    st.subheader("Final Answer")
+    final_verdict = interpretation.get("verdict", summary.verdict)
+    final_confidence = interpretation.get("confidence_band", summary.confidence_band)
+    final_rationale = interpretation.get("rationale", summary.top_rationale)
+
+    _section(
+        "Final Answer",
+        "Primary verdict uses curated evidence when available; literature validates and DepMap remains experimental support.",
+    )
+    _summary_card(final_verdict, final_confidence, final_rationale)
     a, b, c, d = st.columns(4)
-    a.metric("Verdict", interpretation.get("verdict", summary.verdict))
-    b.metric("Confidence", interpretation.get("confidence_band", summary.confidence_band).upper())
+    a.metric("Verdict", final_verdict)
+    b.metric("Confidence", final_confidence.upper())
     c.metric("Evidence basis", getattr(evidence_conclusion, "evidence_basis", "unknown"))
     d.metric("Confidence score", getattr(evidence_conclusion, "confidence_score", 0))
-    st.write(interpretation.get("rationale", summary.top_rationale))
 
     if evidence_conclusion:
         st.caption(
@@ -276,7 +606,10 @@ def _render_results(result):
             st.caption(f"Limitation: {limitation}")
 
     if result.get("agent_steps"):
-        st.subheader("Agent Steps")
+        _section(
+            "Analysis Pipeline",
+            "Steps are grouped by type. Deterministic modules run without an LLM; optional LLM modules are inactive unless an API key is configured.",
+        )
         st.dataframe(result["agent_steps"], use_container_width=True, hide_index=True)
 
     source_plan = result.get("source_plan") or {}
@@ -285,17 +618,17 @@ def _render_results(result):
             st.json(source_plan)
 
     if interpretation.get("key_evidence"):
-        st.subheader("Key Evidence")
+        _section("Key Evidence")
         for line in interpretation["key_evidence"]:
             st.write(f"- {line}")
     if interpretation.get("cautions"):
-        st.subheader("Interpretation Cautions")
+        _section("Interpretation Cautions")
         for line in interpretation["cautions"]:
             st.write(f"- {line}")
 
     database_summary = result.get("database_summary")
     if database_summary:
-        st.subheader("Database Evidence")
+        _section("Database Evidence", "CIViC evidence drives the database verdict; DepMap/GDSC is shown separately as support.")
         a, b, c = st.columns(3)
         a.metric("Database-only verdict", database_summary.verdict)
         b.metric("Curated direct", database_summary.direct_evidence_count)
@@ -308,13 +641,13 @@ def _render_results(result):
         ("Direct curated", result["direct_curated"]),
         ("Related curated", result["related_curated"]),
     ]:
-        st.subheader(title)
+        _section(title)
         if not records:
             st.caption("No records matched this section.")
             continue
         st.dataframe(_records_to_frame(records), use_container_width=True, hide_index=True)
 
-    st.subheader("Supporting experimental")
+    _section("Supporting Experimental", "DepMap/GDSC associations are preclinical and do not drive the primary verdict.")
     supporting_records = result["supporting_experimental"]
     if not supporting_records:
         st.caption("No records matched this section.")
@@ -322,7 +655,7 @@ def _render_results(result):
         st.caption("DepMap/GDSC evidence is preclinical. Use the Quality column to distinguish HIGH, MEDIUM, and LOW confidence associations.")
         st.dataframe(_records_to_frame(supporting_records), use_container_width=True, hide_index=True)
 
-    st.subheader("Literature Validation")
+    _section("Literature Validation", "Only exact biomarker/profile claim sentences count toward the literature verdict.")
     diagnostics = literature_search.get("diagnostics") or {}
     st.caption(
         f"Query: {literature_search.get('query', 'not available')} | "
@@ -354,15 +687,15 @@ def _render_results(result):
 
     digest = result.get("evidence_digest") or {}
     if digest.get("highlights"):
-        st.subheader("Highlights")
+        _section("Highlights")
         for line in digest["highlights"]:
             st.write(f"- {line}")
     if digest.get("cautions"):
-        st.subheader("Cautions")
+        _section("Cautions")
         for line in digest["cautions"]:
             st.write(f"- {line}")
 
-    st.subheader("Normalized Query")
+    _section("Normalized Query", "Canonicalized query fields used for matching evidence.")
     st.json(
         {
             "gene_symbol": query.gene_symbol,
@@ -382,7 +715,7 @@ def _render_results(result):
             st.markdown(result["literature_context"])
 
     if result.get("report_text"):
-        st.subheader("Narrative Report")
+        _section("Narrative Report")
         st.markdown(result["report_text"])
 
 
@@ -396,7 +729,7 @@ def _manual_query_form():
     cancer_choices = [*cancer_options, CANCER_OTHER_OPTION]
     _init_manual_form_state(gene_options, drug_choices, cancer_choices, aa_options)
 
-    st.markdown("**Ready examples**")
+    _section("Ready Examples", "Use a preset to quickly test small variant, copy-number, expression, and fusion workflows.")
     example_cols = st.columns(len(EXAMPLE_QUERIES))
     for col, example in zip(example_cols, EXAMPLE_QUERIES):
         with col:
@@ -507,11 +840,14 @@ def _manual_query_form():
                 "cautions": [],
             }
             result["agent_steps"] = [
-                {"skill": "manual_query", "status": "done", "summary": "Used the structured form instead of LLM parsing."},
-                {"skill": "literature_search", "status": "done", "summary": f"Retrieved {len(result['literature_search']['records'])} literature records."},
-                {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['direct_literature_claims'])} direct and {len(result['related_literature_claims'])} related claim sentences."},
-                {"skill": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
-                {"skill": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} from {result['evidence_conclusion'].evidence_basis} evidence."},
+                {"type": "Deterministic", "step": "structured_query", "status": "done", "summary": "Used the structured form instead of LLM parsing."},
+                {"type": "Deterministic", "step": "literature_search", "status": "done", "summary": f"Retrieved {len(result['literature_search']['records'])} literature records."},
+                {"type": "Deterministic", "step": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['direct_literature_claims'])} direct and {len(result['related_literature_claims'])} related claim sentences."},
+                {"type": "Deterministic", "step": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
+                {"type": "Deterministic", "step": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} from {result['evidence_conclusion'].evidence_basis} evidence."},
+                {"type": "Optional LLM", "step": "llm_query_parser", "status": "inactive", "summary": "Inactive in structured mode; set ANTHROPIC_API_KEY to enable free-text parsing."},
+                {"type": "Optional LLM", "step": "llm_biological_context", "status": "inactive", "summary": "Inactive because no LLM report/context generation is used in structured mode."},
+                {"type": "Optional LLM", "step": "llm_report_writer", "status": "inactive", "summary": "Inactive because no LLM narrative report is generated in structured mode."},
             ]
         st.session_state.description = description
         st.session_state.result = result
@@ -521,17 +857,14 @@ def _manual_query_form():
 
 def main():
     st.set_page_config(page_title="TRACE", layout="wide")
+    _inject_trace_theme()
     init_state()
     phase = st.session_state.phase
     llm_ready = llm_enabled()
 
-    st.title("TRACE")
-    st.caption(
-        "Therapy Response And Cancer Evidence: a research-use tool for biomarker, therapy, "
-        "and cancer-context response evidence."
-    )
+    _render_trace_hero()
 
-    col1, col2 = st.columns([5, 1])
+    col1, col2 = st.columns([6, 1])
     with col2:
         if st.button("Restart", use_container_width=True):
             reset_state()

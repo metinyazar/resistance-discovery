@@ -73,13 +73,13 @@ def run_variant_analysis(description: str, confirmed_query) -> dict:
 
     result["source_plan"] = source_plan
     result["agent_steps"] = [
-        {"skill": "query_parser", "status": "done", "summary": "Parsed and confirmed the biomarker-response query."},
-        {"skill": "source_planner", "status": "done", "summary": f"Selected {len(source_plan.get('sources', []))} evidence sources."},
-        {"skill": "literature_search", "status": "done", "summary": f"Retrieved {len(result['literature_search']['records'])} literature records."},
-        {"skill": "paper_ranker", "status": "done", "summary": f"Ranked {len(result['ranked_papers'])} papers by transparent match flags."},
-        {"skill": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['direct_literature_claims'])} direct and {len(result['related_literature_claims'])} related claim sentences."},
-        {"skill": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
-        {"skill": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} with {result['summary'].confidence_band} database-primary confidence."},
+        {"type": "Optional LLM", "step": "query_parser", "status": "done", "summary": "Parsed and confirmed the biomarker-response query."},
+        {"type": "Deterministic", "step": "source_planner", "status": "done", "summary": f"Selected {len(source_plan.get('sources', []))} evidence sources."},
+        {"type": "Deterministic", "step": "literature_search", "status": "done", "summary": f"Retrieved {len(result['literature_search']['records'])} literature records."},
+        {"type": "Deterministic", "step": "paper_ranker", "status": "done", "summary": f"Ranked {len(result['ranked_papers'])} papers by transparent match flags."},
+        {"type": "Deterministic", "step": "claim_extractor", "status": "done", "summary": f"Extracted {len(result['direct_literature_claims'])} direct and {len(result['related_literature_claims'])} related claim sentences."},
+        {"type": "Deterministic", "step": "database_support", "status": "done", "summary": f"Attached {len(result['direct_curated']) + len(result['related_curated'])} curated and {len(result['supporting_experimental'])} experimental support records."},
+        {"type": "Deterministic", "step": "evidence_synthesizer", "status": "done", "summary": f"Called {result['summary'].verdict} with {result['summary'].confidence_band} database-primary confidence."},
     ]
 
     evidence_digest = harmonize_evidence(result)
@@ -96,7 +96,8 @@ def run_variant_analysis(description: str, confirmed_query) -> dict:
     result["interpretation"] = interpretation
     result["agent_steps"].append(
         {
-            "skill": "evidence_interpreter",
+            "step": "evidence_interpreter",
+            "type": "Deterministic",
             "status": "done",
             "summary": f"Called {interpretation['verdict']} with {interpretation['confidence_band']} confidence.",
         }
@@ -105,16 +106,18 @@ def run_variant_analysis(description: str, confirmed_query) -> dict:
     result["literature_context"] = get_literature_context(result["query"], result)
     result["agent_steps"].append(
         {
-            "skill": "literature_context",
-            "status": "done" if result["literature_context"] else "skipped",
+            "step": "llm_biological_context",
+            "type": "Optional LLM",
+            "status": "done" if result["literature_context"] else "inactive",
             "summary": "Generated biological context." if result["literature_context"] else "LLM context skipped because no API key is configured.",
         }
     )
     result["report_text"] = generate_narrative(description, result)
     result["agent_steps"].append(
         {
-            "skill": "report_writer",
-            "status": "done" if result["report_text"] else "skipped",
+            "step": "llm_report_writer",
+            "type": "Optional LLM",
+            "status": "done" if result["report_text"] else "inactive",
             "summary": "Generated narrative report." if result["report_text"] else "LLM report skipped because no API key is configured.",
         }
     )
